@@ -137,6 +137,10 @@ One schema for all workspaces. No per-workspace schemas.
 - The same address on the laptop and on the phone, responsive layout.
 - Manifest and service worker, installs to the Android home screen,
   opens without the address bar once installed.
+- A new build reaches a running app on its own: the app checks for one hourly and
+  reloads once the new service worker takes over. An installed app on the phone is
+  resumed rather than reopened for days, and without the check it would go on
+  serving the build it was installed with.
 
 ---
 

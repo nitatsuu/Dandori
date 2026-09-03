@@ -8,6 +8,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // The registration lives in main.tsx: the script this would inject only
+      // registers the worker and never reloads the page, so an open tab — and an
+      // installed app on the phone especially — kept running the build it started with.
+      injectRegister: null,
       manifest: {
         name: 'Dandori',
         short_name: 'Dandori',
@@ -38,6 +42,8 @@ export default defineConfig({
         ],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
+        // A new worker takes over at once instead of waiting for every tab to close.
+        skipWaiting: true,
       },
     }),
   ],
