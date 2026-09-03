@@ -1,0 +1,26 @@
+# local prompt notes
+claude/
+
+# dependencies
+node_modules/
+
+# build output
+dist/
+dist-ssr/
+.vite/
+
+# environment
+.env
+.env.*
+!.env.example
+
+# editor / os
+.DS_Store
+*.local
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# logs
+*.log
+npm-debug.log*
