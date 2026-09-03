@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { marked } from 'marked'
+import { renderMarkdown } from '../lib/markdown'
 import { createLabel, deleteTask, updateTask } from '../db/api'
 import { useTask } from '../db/hooks'
 import { pluralDays } from '../db/dates'
@@ -121,7 +121,7 @@ export function TaskDialog({ taskId, workspaceId, labels, onClose }: Props) {
           {preview ? (
             <div
               className="dialog__markdown"
-              dangerouslySetInnerHTML={{ __html: marked.parse(task.description) as string }}
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(task.description) }}
             />
           ) : (
             <textarea
