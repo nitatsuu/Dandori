@@ -139,18 +139,29 @@ Gantt- и календарь-библиотеки не подключаем: о�
 ## Схема базы
 
 ```
-workspaces   id, user_id, name, position, created_at, updated_at
-labels       id, workspace_id, name, color, position, updated_at
-tasks        id, workspace_id, title, description, start_date, due_date,
-             done, remind_days_before, position,
-             custom_fields jsonb [{name, value}], created_at, updated_at
-task_labels  task_id, label_id
-notes        id, workspace_id, parent_id, kind (folder|file),
-             name, content, position, created_at, updated_at
+workspaces   id, user_id, name, position, created_at, updated_at, deleted
+labels       id, user_id, workspace_id, name, color, position,
+             created_at, updated_at, deleted
+tasks        id, user_id, workspace_id, title, description,
+             start_date, due_date, done, remind_days_before, position,
+             label_ids jsonb [uuid], custom_fields jsonb [{name, value}],
+             created_at, updated_at, deleted
+notes        id, user_id, workspace_id, parent_id, kind (folder|file),
+             name, content, position, created_at, updated_at, deleted
 ```
 
 Все таблицы под RLS, привязка к `auth.uid()`.
+
 Даты — тип `date`, не `timestamp`. Времени суток в схеме нет и не будет.
+Исключение — служебные `created_at` / `updated_at`: они не показываются
+в интерфейсе и нужны только для разрешения конфликтов.
+
+Метки лежат массивом `label_ids` в самой задаче, join-таблицы нет.
+Пользователь один, ссылочная целостность тут ничего не даёт,
+а синхронизацию усложняет вдвое.
+
+Удаление мягкое: `deleted = true`. Иначе удаление на телефоне не доедет
+до ноутбука, который в этот момент был офлайн.
 
 ---
 

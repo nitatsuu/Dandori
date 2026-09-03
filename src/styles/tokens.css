@@ -1,0 +1,132 @@
+/*
+ * Палитра и размеры. Плотная сетка: интерфейс рассчитан на то,
+ * чтобы на доске помещалось как можно больше дней.
+ */
+
+:root {
+  --sp-1: 2px;
+  --sp-2: 4px;
+  --sp-3: 6px;
+  --sp-4: 8px;
+  --sp-5: 12px;
+  --sp-6: 16px;
+  --sp-7: 24px;
+
+  --radius: 5px;
+  --radius-lg: 8px;
+
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --fz-xs: 11px;
+  --fz-sm: 12px;
+  --fz-md: 13px;
+  --fz-lg: 15px;
+  --fz-xl: 19px;
+
+  --header-h: 44px;
+  --tabbar-h: 52px;
+  --day-col-w: 220px;
+  --day-col-w-mobile: 78vw;
+
+  /* Палитра меток. Названия задаёт пользователь, здесь только цвета. */
+  --label-red: #e5484d;
+  --label-orange: #f76b15;
+  --label-amber: #ffb224;
+  --label-green: #30a46c;
+  --label-teal: #12a594;
+  --label-blue: #0091ff;
+  --label-violet: #8e4ec6;
+  --label-pink: #d6409f;
+  --label-slate: #7b8496;
+}
+
+/* Светлая тема — база */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f6f7f9;
+  --bg-raised: #ffffff;
+  --bg-sunken: #eceef1;
+  --bg-hover: #e6e8ec;
+  --bg-active: #dcdfe4;
+
+  --border: #dcdfe4;
+  --border-strong: #c3c8d0;
+
+  --text: #1a1d23;
+  --text-dim: #61656d;
+  --text-faint: #8b909a;
+
+  --accent: #0068d6;
+  --accent-bg: #e1efff;
+  --accent-text: #ffffff;
+
+  --danger: #cf2b31;
+  --today: #0068d6;
+  --overdue-bg: #fdecec;
+
+  --shadow-card: 0 1px 2px rgba(16, 20, 30, 0.08);
+  --shadow-pop: 0 8px 28px rgba(16, 20, 30, 0.18);
+}
+
+/* Тёмная тема — системная настройка */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg: #16181d;
+    --bg-raised: #1e2127;
+    --bg-sunken: #111318;
+    --bg-hover: #272b33;
+    --bg-active: #31363f;
+
+    --border: #2a2e36;
+    --border-strong: #3b414b;
+
+    --text: #e7e9ee;
+    --text-dim: #9aa1ae;
+    --text-faint: #6c7381;
+
+    --accent: #3d8bfd;
+    --accent-bg: #16304f;
+    --accent-text: #ffffff;
+
+    --danger: #ef5b5b;
+    --today: #3d8bfd;
+    --overdue-bg: #3a1d1f;
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.55);
+  }
+}
+
+/* Тёмная тема — выбрана вручную */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #16181d;
+  --bg-raised: #1e2127;
+  --bg-sunken: #111318;
+  --bg-hover: #272b33;
+  --bg-active: #31363f;
+
+  --border: #2a2e36;
+  --border-strong: #3b414b;
+
+  --text: #e7e9ee;
+  --text-dim: #9aa1ae;
+  --text-faint: #6c7381;
+
+  --accent: #3d8bfd;
+  --accent-bg: #16304f;
+  --accent-text: #ffffff;
+
+  --danger: #ef5b5b;
+  --today: #3d8bfd;
+  --overdue-bg: #3a1d1f;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.55);
+}
