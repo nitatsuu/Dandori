@@ -3,16 +3,16 @@ import { labelColors, labelVar } from '../../lib/labels'
 import type { ISODate, Label, Task } from '../../db/types'
 
 /*
- * Общее для всех режимов доски: колонка — это день.
- * Задачи без даты живут в отдельной колонке с ключом NO_DATE:
- * в Map отсутствие ключа и `null` не различить.
+ * Shared by every board mode: a column is a day.
+ * Tasks with no date live in their own column keyed by NO_DATE —
+ * a Map cannot tell a missing key from a `null` one.
  */
 
 export const NO_DATE = 'nodate'
 
 /**
- * Закреплённая колонка с просроченным. Своей даты у неё нет:
- * задачи лежат каждая со своей, поэтому дропы в неё не принимаются.
+ * The pinned overdue column. It has no date of its own — every task in it keeps
+ * its original one — so drops into it are rejected.
  */
 export const OVERDUE = 'overdue'
 
@@ -30,7 +30,7 @@ export function columnId(date: ISODate | null): string {
   return columnIdOf(columnKey(date))
 }
 
-/** Ключ колонки из идентификатора droppable, либо `null`, если это не колонка. */
+/** Column key from a droppable id, or `null` when the id is not a column. */
 export function keyFromColumnId(id: string): string | null {
   return id.startsWith(COLUMN_PREFIX) ? id.slice(COLUMN_PREFIX.length) : null
 }
@@ -55,7 +55,7 @@ export function isOverdue(task: Task, today: ISODate): boolean {
   return !task.done && task.due_date !== null && task.due_date < today
 }
 
-/** Просроченное, кроме дней, которые и так показаны колонками: там задача уже видна. */
+/** Overdue tasks, minus the days the window already shows as columns. */
 export function collectOverdue(
   groups: Map<string, Task[]>,
   today: ISODate,
@@ -92,7 +92,7 @@ export function cardClass(
     .join(' ')
 }
 
-/** Цвет первой метки уходит в полоску слева, а на телефоне красит всю карточку. */
+/** The first label's colour becomes the left stripe, and tints the whole card on a phone. */
 export function accent(task: Task, labels: Label[]): CSSProperties {
   const first = labelColors(task, labels)[0]
   return { '--card-accent': first ? labelVar(first) : 'var(--border)' } as CSSProperties

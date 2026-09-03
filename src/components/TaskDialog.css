@@ -103,7 +103,7 @@
   resize: vertical;
 }
 
-/* Сама разметка описана один раз в base.css под классом .md, здесь только место под неё. */
+/* Markdown styling is defined once in base.css under the .md class; only its box is set here. */
 .dialog__markdown {
   min-height: 120px;
   padding: var(--sp-3) var(--sp-4);
@@ -120,7 +120,7 @@
   border-top: 1px solid var(--border);
 }
 
-/* Метки */
+/* Labels */
 
 .labels {
   display: flex;
@@ -164,7 +164,7 @@
   gap: var(--sp-2);
 }
 
-/* Режим правки: цвет, название и удаление у каждой метки разом */
+/* Edit mode: colour, name and delete for every label at once */
 
 .labels__manage {
   display: flex;
@@ -200,7 +200,7 @@
   border-color: var(--text);
 }
 
-/* Произвольные поля */
+/* Custom fields */
 
 .cfield {
   display: grid;

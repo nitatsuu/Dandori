@@ -1,162 +1,164 @@
 # Dandori
 
-Персональный планировщик на одного пользователя. Ноутбук и телефон равноценны.
+A personal planner for a single user. The laptop and the phone are equal.
 
-**Главный критерий проекта — минимализм.** Если функция не описана в этом файле,
-её не должно быть. Ничего «на будущее», ничего «потому что обычно так делают».
-Лишняя кнопка — это провал требования, а не бонус.
+**The main criterion of this project is minimalism.** If a feature is not described
+in this file, it must not exist. Nothing "for the future", nothing "because that is
+how it is usually done". An extra button is a failed requirement, not a bonus.
 
 ---
 
-## Продуктовые решения
+## Product decisions
 
-Зафиксированы по итогам интервью. Менять только по явной просьбе владельца проекта.
+Fixed after the interviews. Change only at the explicit request of the project owner.
 
-### Воркспейсы
+### Workspaces
 
-- Воркспейсы создаёт пользователь, их количество произвольное.
-  Стартовые два (работа, университет) — не хардкод, а обычные записи в базе.
-- Изоляция полная: свои задачи, свои метки, свои заметки. Ничего не показывается вместе.
-- Переключение — один клик из шапки.
-- Воркспейс можно переименовать и удалить. Раз он произвольный, опечатку
-  в названии надо чем-то исправлять, иначе она остаётся навсегда.
+- Workspaces are created by the user, there can be any number of them.
+  The two starting ones (work, university) are not hardcoded, they are ordinary rows
+  in the database.
+- Isolation is complete: own tasks, own labels, own notes. Nothing is shown together.
+- Switching is one click from the header.
+- A workspace can be renamed and deleted. Since it is arbitrary, a typo in the name
+  needs some way to be fixed, otherwise it stays there forever.
 
-### Доска
+### Board
 
-- Колонки — это **дни**, а не статусы. Перетащил карточку в другую колонку — сменил дату.
-- Два режима диапазона:
-  - `14 дней` — скользящее окно, первая колонка всегда «Сегодня».
-  - `Лента` — бесконечный скролл дней влево и вправо, дни подгружаются на ходу.
-- Третий режим — `Месяц`: обычная месячная сетка. Это и есть календарь из требований,
-  отдельной вкладки под него нет.
-- Колонка «Без даты» закреплена слева, при скролле не уезжает.
-  Перетаскивание обратно в неё снимает дату.
-- Колонка «Просрочено» — вторая закреплённая, сразу за «Без даты».
-  Показывает невыполненные задачи с прошедшим дедлайном, которых не видно
-  в окне. Появляется, только когда такие задачи есть. Задача сохраняет свою
-  настоящую дату, она подписана на карточке; перетаскивание в день переносит срок.
-  Класть в эту колонку нельзя: своей даты у неё нет.
-- Окно «14 дней» начинается со вчера: иначе вчерашний дедлайн исчезал бы
-  с доски в полночь. В режимах «Лента» и «Месяц» прошлое и так доступно.
-- На телефоне закреплённых колонок нет: закреплённая область плюс один день
-  занимают весь экран, вторая туда не влезает. «Без даты» и «Просрочено»
-  становятся обычными первыми колонками ленты, стартовый скролл — на сегодня.
-- Задача с далёкой датой остаётся на своей дате, никуда не «схлопывается».
-- «Сделано» — галочка прямо на карточке. Карточка бледнеет и зачёркивается,
-  но остаётся на своём дне.
+- Columns are **days**, not statuses. Drag a card into another column and you change its date.
+- Two range modes:
+  - `14 дней` (14 days) — a sliding window, the first column is always «Сегодня» (today).
+  - `Лента` (feed) — infinite scroll of days to the left and to the right, days load as you go.
+- The third mode is `Месяц` (month): a plain monthly grid. This is the calendar from
+  the requirements, there is no separate tab for it.
+- The «Без даты» (no date) column is pinned on the left and does not scroll away.
+  Dragging a card back into it clears the date.
+- The «Просрочено» (overdue) column is the second pinned one, right after «Без даты».
+  It shows unfinished tasks with a past deadline that are not visible in the window.
+  It appears only when such tasks exist. A task keeps its real date, which is printed
+  on the card; dragging it onto a day moves the deadline. You cannot drop a card into
+  this column: it has no date of its own.
+- The «14 дней» window starts from yesterday: otherwise yesterday's deadline would
+  disappear from the board at midnight. In «Лента» and «Месяц» the past is reachable anyway.
+- On the phone there are no pinned columns: the pinned area plus one day already fill
+  the whole screen, the second one does not fit. «Без даты» and «Просрочено» become
+  ordinary first columns of the feed, and the initial scroll position is today.
+- A task with a far-off date stays on its own date, it does not "collapse" anywhere.
+- «Сделано» (done) is a checkbox right on the card. The card fades and gets struck
+  through, but stays on its day.
 
-### Карточка
+### Card
 
-Единая схема для всех воркспейсов. Никаких схем на воркспейс.
+One schema for all workspaces. No per-workspace schemas.
 
-- Название
-- Описание (markdown)
-- Дата начала (необязательно)
-- Дедлайн (необязательно)
-- Метки
-- Напомнить за N дней
-- Готово (галочка)
-- Произвольные поля: список пар «имя — значение», добавляются пользователем
-  по надобности. Ссылки, номера, что угодно — сюда. Отдельного поля «ссылка» нет.
+- Title
+- Description (markdown)
+- Start date (optional)
+- Deadline (optional)
+- Labels
+- Remind N days before
+- Done (checkbox)
+- Custom fields: a list of name–value pairs, added by the user when needed.
+  Links, numbers, anything — they go here. There is no separate "link" field.
 
-**Только даты, без времени суток.** Никаких «14:30», тайм-слотов, тайм-блокинга.
+**Dates only, no time of day.** No "14:30", no time slots, no time blocking.
 
-### Метки
+### Labels
 
-- 5–10 предопределённых **цветов**. Названия задаёт пользователь, в коде не хардкодятся.
-- Метку можно переименовать, перекрасить и удалить — в том же списке меток
-  в карточке задачи, режим «Правка». Удалённая метка снимается со всех задач.
-- Метки свои в каждом воркспейсе.
-- Фильтр по меткам в шапке, действует сразу на все виды.
+- 5–10 predefined **colors**. The names are set by the user, they are not hardcoded.
+- A label can be renamed, recolored and deleted — in the same list of labels
+  in the task card, «Правка» (edit) mode. A deleted label is removed from all tasks.
+- Labels are separate in every workspace.
+- The label filter lives in the header and applies to all views at once.
 
-### Таймлайн
+### Timeline
 
-- Отдельная вкладка. Горизонтальные полоски по датам.
-- Полоска от даты начала до дедлайна. Если дата одна — точка/веха.
-- Основной сценарий: увидеть все дедлайны на одной шкале и понять, где затык.
-- Диапазон шкалы не короче месяца от сегодня: с парой задач шкала иначе
-  занимала треть экрана и выглядела обрезанной.
-- На телефоне скроллится горизонтально, на ноуте помещается целиком.
+- A separate tab. Horizontal bars along the dates.
+- A bar runs from the start date to the deadline. If there is only one date — a dot/milestone.
+- The main scenario: see all deadlines on one scale and understand where the jam is.
+- The scale is never shorter than a month from today: with a couple of tasks it would
+  otherwise take a third of the screen and look cut off.
+- On the phone it scrolls horizontally, on the laptop it fits entirely.
 
-### Заметки
+### Notes
 
-- Сайдбар с деревом папок и файлов, по ощущению как файловое дерево в VS Code.
-- Markdown, редактируется прямо в приложении.
-- Дерево своё в каждом воркспейсе.
+- A sidebar with a tree of folders and files, feels like the file tree in VS Code.
+- Markdown, edited right inside the app.
+- The tree is separate in every workspace.
 
-### Напоминания
+### Reminders
 
-- Только плашка сверху внутри приложения: просрочено / сегодня / ближайшие дни.
-- Плашка **закрывается** и в текущей сессии больше не возвращается.
-  При следующем открытии приложения появляется снова.
-- Push-уведомлений нет. Интеграции с внешними календарями нет.
+- Only a banner at the top inside the app: overdue / today / the next few days.
+- The banner **can be dismissed** and does not come back during the current session.
+  It shows up again the next time the app is opened.
+- No push notifications. No integration with external calendars.
 
-### Интерфейс
+### Interface
 
-- Две темы: тёмная и светлая, по системной настройке плюс ручной переключатель.
-- Плотность — компактная.
-- Три вкладки: `Доска` · `Таймлайн` · `Заметки`.
-- Точка состояния синхронизации в шапке: 7×7 px, видна только при обмене,
-  офлайне или ошибке. Приложение пишет в локальную базу и не ждёт сети,
-  поэтому без неё молчаливый отказ отправки выглядел бы как успех.
+- Two themes: dark and light, following the system setting plus a manual toggle.
+- Density is compact.
+- Three tabs: `Доска` (board) · `Таймлайн` (timeline) · `Заметки` (notes).
+- Sync status dot in the header: 7×7 px, visible only during an exchange, when offline
+  or on error. The app writes to the local database and does not wait for the network,
+  so without the dot a silently failed send would look like success.
 
-### Данные
+### Data
 
-- Supabase Postgres, доступ закрыт политиками RLS по `user_id`.
-- Вход по email и паролю. Аккаунт один.
-- Офлайн: чтение и правка. Локальный кэш в IndexedDB, очередь правок уезжает при сети.
-- Разрешение конфликтов — last-write-wins по `updated_at`.
-- Экспорт всех данных в JSON. Импорта нет.
+- Supabase Postgres, access closed off by RLS policies on `user_id`.
+- Login by email and password. There is one account.
+- Offline: reading and editing. Local cache in IndexedDB, the queue of edits goes out
+  once there is network.
+- Conflict resolution is last-write-wins by `updated_at`.
+- Export of all data to JSON. There is no import.
 
 ### PWA
 
-- Один и тот же адрес на ноуте и телефоне, отзывчивая вёрстка.
-- Манифест и service worker, ставится на домашний экран Android,
-  после установки открывается без адресной строки.
+- The same address on the laptop and on the phone, responsive layout.
+- Manifest and service worker, installs to the Android home screen,
+  opens without the address bar once installed.
 
 ---
 
-## Чего быть не должно
+## What must not exist
 
-Список закрытый. Любой пункт отсюда в коде или интерфейсе — это баг.
+The list is closed. Any item from here, in the code or in the interface, is a bug.
 
-- Совместная работа: пользователи, роли, приглашения, исполнители, комментарии, упоминания.
-- Тайм-трекинг, оценки в часах, отчёты по времени, время суток в любом виде.
-- Спринты, циклы, модули, эпики, бэклоги, story points.
-- Автоматизации, правила, вебхуки, интеграции с внешними сервисами.
-- AI-функции любого рода.
-- Дашборды с метриками, графики продуктивности, статистика.
-- Онбординг-туры, пустые состояния с иллюстрациями, обучающие подсказки.
-- Push-уведомления.
-- Настраиваемые схемы полей на воркспейс.
-- Любые индикаторы и счётчики, кроме точки состояния синхронизации.
+- Collaboration: users, roles, invites, assignees, comments, mentions.
+- Time tracking, estimates in hours, time reports, time of day in any form.
+- Sprints, cycles, modules, epics, backlogs, story points.
+- Automations, rules, webhooks, integrations with external services.
+- AI features of any kind.
+- Dashboards with metrics, productivity charts, statistics.
+- Onboarding tours, empty states with illustrations, teaching hints.
+- Push notifications.
+- Configurable field schemas per workspace.
+- Any indicators and counters except the sync status dot.
 
 ---
 
-## Стек
+## Stack
 
-| Слой | Выбор |
+| Layer | Choice |
 |---|---|
-| Сборка | Vite |
+| Build | Vite |
 | UI | React + TypeScript |
-| Стили | обычный CSS + CSS-переменные, две темы токенами |
+| Styles | plain CSS + CSS variables, two themes as tokens |
 | Drag & drop | `@dnd-kit` |
-| Локальный кэш | `dexie` (IndexedDB) |
-| Бэкенд | Supabase (Postgres + Auth + RLS) |
+| Local cache | `dexie` (IndexedDB) |
+| Backend | Supabase (Postgres + Auth + RLS) |
 | Markdown | `marked` |
 | PWA | `vite-plugin-pwa` |
-| Хостинг | Cloudflare Pages |
+| Hosting | Cloudflare Workers (static assets) |
 
-Таймлайн, месячная сетка и лента дней пишутся руками на CSS grid.
-Gantt- и календарь-библиотеки не подключаем: они все тащат тайм-слоты и часы,
-а у нас только даты.
+The timeline, the monthly grid and the day feed are written by hand on CSS grid.
+We do not pull in Gantt or calendar libraries: they all drag in time slots and hours,
+and we only have dates.
 
-Новая зависимость добавляется, только если написать руками заметно дороже.
-Обосновать в сообщении коммита.
+A new dependency is added only if writing it by hand is noticeably more expensive.
+Justify it in the commit message.
 
 ---
 
-## Схема базы
+## Database schema
 
 ```
 workspaces   id, user_id, name, position, created_at, updated_at, deleted
@@ -170,108 +172,109 @@ notes        id, user_id, workspace_id, parent_id, kind (folder|file),
              name, content, position, created_at, updated_at, deleted
 ```
 
-Все таблицы под RLS, привязка к `auth.uid()`.
+All tables are under RLS, bound to `auth.uid()`.
 
-Даты — тип `date`, не `timestamp`. Времени суток в схеме нет и не будет.
-Исключение — служебные `created_at` / `updated_at`: они не показываются
-в интерфейсе и нужны только для разрешения конфликтов.
+Dates use the `date` type, not `timestamp`. There is no time of day in the schema
+and there never will be. The exception is the housekeeping `created_at` / `updated_at`:
+they are never shown in the interface and are only needed for conflict resolution.
 
-Метки лежат массивом `label_ids` в самой задаче, join-таблицы нет.
-Пользователь один, ссылочная целостность тут ничего не даёт,
-а синхронизацию усложняет вдвое.
+Labels are stored as a `label_ids` array in the task itself, there is no join table.
+There is a single user, referential integrity buys nothing here
+and makes sync twice as complicated.
 
-Удаление мягкое: `deleted = true`. Иначе удаление на телефоне не доедет
-до ноутбука, который в этот момент был офлайн.
+Deletion is soft: `deleted = true`. Otherwise a deletion made on the phone would never
+reach the laptop that was offline at that moment.
 
 ---
 
-## Роли агентов
+## Agent roles
 
-Деление по слоям. Агент не лезет в чужие файлы: нужна правка за границей —
-описывает её в отчёте, координатор решает, кто вносит.
+The split is by layer. An agent does not touch files owned by others: if a change is
+needed beyond its boundary, it describes it in the report and the coordinator decides
+who makes it.
 
-### `coordinator` — координатор (главная сессия)
+### `coordinator` — coordinator (main session)
 
-Стоит над всеми. **Единственный агент, у которого есть полный контекст проекта:**
-история интервью с владельцем, продуктовые решения и причины, по которым они приняты,
-состояние всех слоёв разом.
+Stands above everyone. **The only agent with the full project context:**
+the history of the interviews with the owner, the product decisions and the reasons
+they were made for, the state of all layers at once.
 
-- Ставит задачи слоевым агентам и принимает их отчёты.
-- Все вопросы других агентов идут к нему, а не напрямую к владельцу проекта
-  и не друг к другу.
-- Разрешает споры между слоями и правит границы владения файлами.
-- Решает, что делать с находками `reviewer`.
-- Единственный, кто общается с владельцем проекта.
-  Развилку, которую нельзя решить из этого файла, выносит владельцу
-  вопросами с вариантами ответа, по 2–4 за раз.
-- Держит `CLAUDE.md` в актуальном состоянии: любое новое решение владельца
-  сначала попадает сюда, потом в код.
+- Assigns tasks to the layer agents and accepts their reports.
+- All questions from other agents go to it, not directly to the project owner
+  and not to each other.
+- Resolves disputes between layers and adjusts the file ownership boundaries.
+- Decides what to do with the `reviewer` findings.
+- The only one who talks to the project owner.
+  A fork that cannot be resolved from this file is taken to the owner
+  as questions with answer options, 2–4 at a time.
+- Keeps `CLAUDE.md` up to date: any new decision by the owner lands here first,
+  and only then in the code.
 
-Слоевые агенты контекста друг друга не имеют и не должны его домысливать.
-Не хватает информации — запрос координатору.
+The layer agents do not have each other's context and must not make it up.
+Not enough information — ask the coordinator.
 
-### `data` — данные и синхронизация
+### `data` — data and sync
 
-Владеет: `supabase/`, `src/db/`, `src/sync/`, `src/auth/`.
+Owns: `supabase/`, `src/db/`, `src/sync/`, `src/auth/`.
 
-- Схема Postgres, миграции, политики RLS.
-- Клиент Supabase, авторизация, сессия.
-- Локальный кэш Dexie, очередь офлайн-правок, разрешение конфликтов.
-- Экспорт в JSON.
+- Postgres schema, migrations, RLS policies.
+- Supabase client, authentication, session.
+- Dexie local cache, offline queue of edits, conflict resolution.
+- Export to JSON.
 
-### `ui` — интерфейс
+### `ui` — interface
 
-Владеет: `src/views/`, `src/components/`, `src/styles/`.
+Owns: `src/views/`, `src/components/`, `src/styles/`.
 
-- Доска (три режима), таймлайн, заметки, карточка задачи.
-- Переключатель воркспейсов, фильтр по меткам, плашка напоминаний.
-- Темы, плотность, поведение на телефоне.
-- Данные берёт только через API слоя `data`, напрямую в Supabase не ходит.
+- Board (three modes), timeline, notes, task card.
+- Workspace switcher, label filter, reminder banner.
+- Themes, density, behaviour on the phone.
+- Takes data only through the API of the `data` layer, never goes to Supabase directly.
 
-### `infra` — сборка и деплой
+### `infra` — build and deploy
 
-Владеет: `vite.config.ts`, манифест и service worker, `wrangler.toml`, CI, `README.md`.
+Owns: `vite.config.ts`, the manifest and the service worker, `wrangler.jsonc`, CI, `README.md`.
 
-- Конфигурация сборки, PWA, деплой на Cloudflare Pages.
-- Проверка установки на домашний экран.
-- Секреты в репозиторий не попадают ни при каких обстоятельствах.
+- Build configuration, PWA, deploy to Cloudflare Workers (static assets).
+- Checking the install to the home screen.
+- Secrets never end up in the repository under any circumstances.
 
-### `reviewer` — ревью и контроль минимализма
+### `reviewer` — review and minimalism control
 
-Ничем не владеет, только читает.
+Owns nothing, only reads.
 
-Смотрит каждый кусок перед коммитом. Две обязанности:
+Looks at every piece before it is committed. Two duties:
 
-1. Качество кода: корректность, мёртвый код, дубли.
-2. **Контроль минимализма.** Сверяет диф со списком «Чего быть не должно»
-   и с продуктовыми решениями выше. Любая функция, кнопка или поле,
-   которых нет в этом файле, — это находка, а не улучшение.
+1. Code quality: correctness, dead code, duplication.
+2. **Minimalism control.** Checks the diff against the "What must not exist" list
+   and against the product decisions above. Any feature, button or field
+   that is not in this file is a finding, not an improvement.
 
-Вердикт короткий: список находок или «чисто».
-Спорное решает владелец проекта, а не агент.
+The verdict is short: a list of findings or "clean".
+Anything debatable is decided by the project owner, not by an agent.
 
 ---
 
 ## Git
 
-- Коммиты идут от имени владельца проекта: `nitatsuu <nitatsuu@gmail.com>`.
-- **Никаких упоминаний ассистента**: ни трейлера `Co-Authored-By`,
-  ни строки `Generated with`, ни в коммитах, ни в README, ни в комментариях кода.
-  В `.claude/settings.json` выставлено `includeCoAuthoredBy: false`.
-- Коммитить после каждого законченного куска, а не одним свалом в конце.
-- Сообщения короткие, в одном стиле: `<область>: <что сделано>`.
-  Области: `board`, `timeline`, `notes`, `db`, `sync`, `auth`, `pwa`, `build`, `docs`.
-- Ключи и токены в репозиторий не попадают. Всё локальное — в `.gitignore`.
+- Commits are authored by the project owner: `nitatsuu <nitatsuu@gmail.com>`.
+- **No mentions of the assistant**: no `Co-Authored-By` trailer,
+  no `Generated with` line, not in commits, not in the README, not in code comments.
+  `.claude/settings.json` has `includeCoAuthoredBy: false`.
+- Commit after every finished piece, not in one dump at the end.
+- Messages are short and in one style: `<area>: <what was done>`.
+  Areas: `board`, `timeline`, `notes`, `db`, `sync`, `auth`, `pwa`, `build`, `docs`.
+- Keys and tokens never end up in the repository. Everything local goes into `.gitignore`.
 
 ---
 
-## Критерий готовности
+## Definition of done
 
-- Воркспейсы работают и полностью изолированы.
-- Все виды — доска (14 дней / лента / месяц), таймлайн, заметки — работают
-  на одних и тех же данных.
-- Данные переживают перезагрузку страницы и видны на другом устройстве.
-- Задача создаётся, редактируется и удаляется с телефона так же, как с ноута.
-- Приложение задеплоено, ставится на домашний экран, открывается по одному адресу
-  с обоих устройств.
-- В интерфейсе нет ни одного элемента из списка «Чего быть не должно».
+- Workspaces work and are fully isolated.
+- All views — board (14 days / feed / month), timeline, notes — work
+  on the same data.
+- The data survives a page reload and is visible on the other device.
+- A task is created, edited and deleted from the phone exactly as from the laptop.
+- The app is deployed, installs to the home screen, opens at a single address
+  from both devices.
+- The interface contains not a single element from the "What must not exist" list.

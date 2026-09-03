@@ -1,10 +1,10 @@
 import type { ISODate } from './types'
 
 /*
- * Всё приложение работает с датами без времени суток.
- * Дата — строка `YYYY-MM-DD` в местном времени пользователя.
- * Объект Date используется только как промежуточное представление
- * и всегда берётся/отдаётся в местных, а не UTC, компонентах.
+ * The whole app works with dates that carry no time of day.
+ * A date is a `YYYY-MM-DD` string in the user's local time.
+ * A Date object is only an intermediate representation, and it is always read
+ * and written through its local components, never the UTC ones.
  */
 
 export function toISODate(d: Date): ISODate {
@@ -34,7 +34,7 @@ export function addMonths(s: ISODate, n: number): ISODate {
   const day = d.getDate()
   d.setDate(1)
   d.setMonth(d.getMonth() + n)
-  // Не даём 31 января превратиться в 3 марта.
+  // Keeps January 31 from turning into March 3.
   d.setDate(Math.min(day, daysInMonth(d.getFullYear(), d.getMonth())))
   return toISODate(d)
 }
@@ -43,20 +43,20 @@ export function daysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate()
 }
 
-/** Разница в днях: `b - a`. Отрицательная, если `b` раньше `a`. */
+/** Difference in days: `b - a`. Negative when `b` is earlier than `a`. */
 export function diffDays(a: ISODate, b: ISODate): number {
   const ms = fromISODate(b).getTime() - fromISODate(a).getTime()
   return Math.round(ms / 86_400_000)
 }
 
-/** Список дат от `from` до `to` включительно. */
+/** List of dates from `from` to `to`, inclusive. */
 export function dateRange(from: ISODate, to: ISODate): ISODate[] {
   const out: ISODate[] = []
   for (let d = from; diffDays(d, to) >= 0; d = addDays(d, 1)) out.push(d)
   return out
 }
 
-/** Понедельник недели, в которую попадает дата. */
+/** Monday of the week the date falls in. */
 export function startOfWeek(s: ISODate): ISODate {
   const d = fromISODate(s)
   const shift = (d.getDay() + 6) % 7
@@ -73,8 +73,9 @@ export function endOfMonth(s: ISODate): ISODate {
 }
 
 /**
- * Сетка месяца: целые недели с понедельника, всегда полные ряды.
- * Дни соседних месяцев входят в сетку — их отличают через `isSameMonth`.
+ * Month grid: whole weeks starting on Monday, always full rows.
+ * Days from the neighbouring months are part of the grid — tell them apart
+ * with `isSameMonth`.
  */
 export function monthGrid(anchor: ISODate): ISODate[] {
   const first = startOfWeek(startOfMonth(anchor))
@@ -110,18 +111,18 @@ export function monthNameNominative(s: ISODate): string {
   return MONTHS_NOM[fromISODate(s).getMonth()]
 }
 
-/** «7 марта» — для заголовков колонок. */
+/** Day number with the month name — for day column headers. */
 export function dayLabel(s: ISODate): string {
   const d = fromISODate(s)
   return `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`
 }
 
-/** «Март 2026» — для заголовка месяца. */
+/** Month name with the year — for the month header. */
 export function monthLabel(s: ISODate): string {
   return `${monthNameNominative(s)} ${fromISODate(s).getFullYear()}`
 }
 
-/** Относительная подпись дня для шапки колонки. */
+/** Relative day label for the day column header. */
 export function relativeDayLabel(s: ISODate, now: ISODate = today()): string | null {
   const d = diffDays(now, s)
   if (d === 0) return 'Сегодня'
@@ -130,7 +131,7 @@ export function relativeDayLabel(s: ISODate, now: ISODate = today()): string | n
   return null
 }
 
-/** Русское склонение: 1 день, 2 дня, 5 дней. */
+/** Russian plural forms for a number of days. */
 export function pluralDays(n: number): string {
   const abs = Math.abs(n) % 100
   const last = abs % 10

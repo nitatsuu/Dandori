@@ -11,10 +11,11 @@ interface Props {
 }
 
 /*
- * Просроченное, до чего иначе пришлось бы скроллить назад.
- * Колонка только отдаёт карточки: своей даты у неё нет, класть в неё нечего.
- * Дроп сюда гасится в Board, но droppable нужен — иначе карточка,
- * отпущенная над колонкой, уехала бы в соседний день.
+ * Overdue tasks that would otherwise require scrolling back to reach.
+ * The column only hands cards out: it has no date of its own, so nothing can be
+ * put into it. Drops here are rejected in Board, but the droppable is still
+ * needed — without it a card released over this column would land in the
+ * neighbouring day instead.
  */
 export function OverdueColumn({ tasks, labels, onOpenTask }: Props) {
   const { setNodeRef } = useDroppable({ id: columnIdOf(OVERDUE) })

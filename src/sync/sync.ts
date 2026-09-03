@@ -3,15 +3,16 @@ import { db, getMeta, setMeta, type Local } from '../db/local'
 import { SYNCED_TABLES, type SyncedTable } from '../db/types'
 
 /*
- * Синхронизация с Supabase.
+ * Sync with Supabase.
  *
- * Локальная база всегда впереди: интерфейс пишет в неё и не ждёт сети.
- * Изменённые строки помечаются `_dirty` и уезжают на сервер при первой возможности.
+ * The local database is always ahead: the UI writes to it and never waits for
+ * the network. Changed rows are marked `_dirty` and go to the server at the
+ * first opportunity.
  *
- * Разрешение конфликтов — last-write-wins по `updated_at` на всю строку.
- * Пользователь один с двумя устройствами: настоящий конфликт означает,
- * что он правил одну и ту же карточку на телефоне и на ноутбуке,
- * пока одно из устройств было офлайн. Редкий случай, CRDT ради него не нужен.
+ * Conflicts are resolved last-write-wins by `updated_at`, over the whole row.
+ * There is a single user with two devices: a real conflict means he edited the
+ * same card on the phone and on the laptop while one of them was offline. That
+ * is rare enough that a CRDT is not worth it.
  */
 
 const LAST_PULL = 'last_pull_at'
@@ -42,27 +43,27 @@ export function onSyncState(fn: Listener): () => void {
   return () => listeners.delete(fn)
 }
 
-/** Поля, которых нет на сервере. */
+/** Drops the fields that do not exist on the server. */
 function stripLocal<T extends object>(row: Local<T>): T {
   const { _dirty, ...rest } = row
   return rest as unknown as T
 }
 
 /**
- * Метки времени приходят в разных форматах: локальные пишутся как `…Z`,
- * PostgREST отдаёт `…+00:00`. Сравнивать их как строки нельзя.
+ * Timestamps arrive in different formats: local ones are written as `…Z`, while
+ * PostgREST returns `…+00:00`. Comparing them as strings would be wrong.
  */
 function isNewerOrSame(a: string, b: string): boolean {
   return Date.parse(a) >= Date.parse(b)
 }
 
-// ---------------------------------------------------------------- отправка
+// -------------------------------------------------------------------- push
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null
 let pushInFlight: Promise<void> | null = null
 let pushAgain = false
 
-/** Просьба отправить изменения. Вызовы схлопываются в один отложенный пуш. */
+/** Asks for a push. Repeated calls collapse into a single debounced push. */
 export function requestPush(): void {
   if (pushTimer) clearTimeout(pushTimer)
   pushTimer = setTimeout(() => {
@@ -72,7 +73,7 @@ export function requestPush(): void {
 }
 
 export async function push(): Promise<void> {
-  // Пока идёт отправка, новые просьбы сводятся к одному повтору в конце.
+  // While a push is in flight, further requests collapse into one repeat at the end.
   if (pushInFlight) {
     pushAgain = true
     return pushInFlight
@@ -84,8 +85,8 @@ export async function push(): Promise<void> {
       return
     }
 
-    // Именно getSession: он читает сохранённую сессию локально,
-    // а getUser ходил бы в сеть перед каждым апсертом.
+    // getSession on purpose: it reads the stored session locally, while getUser
+    // would hit the network before every upsert.
     const { data: auth } = await supabase.auth.getSession()
     const userId = auth.session?.user.id
     if (!userId) return
@@ -100,7 +101,7 @@ export async function push(): Promise<void> {
         const { error } = await supabase.from(table).upsert(payload, { onConflict: 'id' })
         if (error) throw error
 
-        // Строку, изменённую во время отправки, грязной оставляем.
+        // A row that changed while the push was in flight stays dirty.
         await db.transaction('rw', db[table], async () => {
           for (const sent of dirty) {
             const current = await db[table].get(sent.id)
@@ -113,7 +114,7 @@ export async function push(): Promise<void> {
       setState('idle')
     } catch (err) {
       setState(navigator.onLine ? 'error' : 'offline')
-      console.error('[sync] отправка не удалась', err)
+      console.error('[sync] push failed', err)
     }
   })()
 
@@ -129,17 +130,18 @@ export async function push(): Promise<void> {
   }
 }
 
-// ------------------------------------------------------------------ загрузка
+// ---------------------------------------------------------------------- pull
 
 let pullInFlight: Promise<void> | null = null
 
 /**
- * Забирает всё, что изменилось на сервере с прошлого раза.
- * На чистом устройстве курсора нет, поэтому первая загрузка выгребает всё.
+ * Fetches everything that changed on the server since last time.
+ * A fresh device has no cursor, so the first pull drags in everything.
  */
 export function pull(): Promise<void> {
-  // Интервал, возвращение из фона и появление сети могут выстрелить разом.
-  // Без этого три загрузки наперегонки перепишут друг другу курсор.
+  // The interval, the return from the background and the network coming back
+  // can all fire at once. Without this guard three racing pulls would overwrite
+  // each other's cursor.
   pullInFlight ??= runPull().finally(() => {
     pullInFlight = null
   })
@@ -153,7 +155,7 @@ async function runPull(): Promise<void> {
   }
 
   const since = (await getMeta(LAST_PULL)) ?? EPOCH
-  // Запас в минуту прикрывает расхождение часов между устройствами.
+  // A minute of slack covers clock skew between devices.
   const startedAt = new Date(Date.now() - 60_000).toISOString()
 
   setState('syncing')
@@ -168,19 +170,19 @@ async function runPull(): Promise<void> {
     setState('idle')
   } catch (err) {
     setState(navigator.onLine ? 'error' : 'offline')
-    console.error('[sync] загрузка не удалась', err)
+    console.error('[sync] pull failed', err)
   }
 }
 
 async function mergeRows(table: SyncedTable, rows: Record<string, unknown>[]): Promise<void> {
   await db.transaction('rw', db[table], async () => {
     for (const remote of rows) {
-      // `user_id` нужен только серверу, локально он лишний.
+      // `user_id` is only needed by the server; locally it is dead weight.
       const { user_id: _user, ...clean } = remote
       const id = clean.id as string
       const local = await db[table].get(id)
 
-      // Локальная правка новее удалённой — её и оставляем, она уедет при отправке.
+      // The local edit is newer than the remote one, so keep it; the next push sends it.
       if (local?._dirty === 1 && isNewerOrSame(local.updated_at, clean.updated_at as string)) {
         continue
       }
@@ -190,18 +192,20 @@ async function mergeRows(table: SyncedTable, rows: Record<string, unknown>[]): P
   })
 }
 
-// ------------------------------------------------------------------- запуск
+// -------------------------------------------------------------------- start
 
 export interface SyncHandle {
-  /** Резолвится, когда первый обмен с сервером завершён — успехом или нет. */
+  /** Resolves once the first exchange with the server is done — successful or not. */
   ready: Promise<void>
   stop: () => void
 }
 
 /**
- * Запускает обмен и держит его: интервал, появление сети, возвращение из фона.
- * Состояние живёт в замыкании, а не в модуле, — иначе клинап одного вызова
- * глушил бы тики следующего, и после перемонтирования синхронизация умирала бы.
+ * Starts the exchange and keeps it running: on an interval, when the network
+ * comes back, and when the tab returns from the background.
+ * The state lives in the closure rather than in the module: otherwise the
+ * cleanup of one call would silence the ticks of the next one, and sync would
+ * die after a remount.
  */
 export function startSync(): SyncHandle {
   let stopped = false

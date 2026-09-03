@@ -1,7 +1,7 @@
 import { TAB_TITLES, TABS, type Tab } from '../state/ui'
 import './TabBar.css'
 
-/** Нижняя панель вкладок. Только на телефоне: на ноутбуке вкладки живут в шапке. */
+/** Bottom tab bar. Phone only: on a laptop the tabs live in the header. */
 export function TabBar({ tab, onSelect }: { tab: Tab; onSelect: (t: Tab) => void }) {
   return (
     <nav className="tabbar">

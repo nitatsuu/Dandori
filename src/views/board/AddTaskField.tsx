@@ -5,12 +5,12 @@ import type { ID, ISODate } from '../../db/types'
 
 interface Props {
   workspaceId: ID
-  /** `null` — задача создаётся без даты. */
+  /** `null` creates the task without a date. */
   date: ISODate | null
   onClose: () => void
 }
 
-/** Инлайн-создание задачи прямо в колонке: Enter — создать, Escape — закрыть. */
+/** Inline task creation right in the column: Enter creates, Escape closes. */
 export function AddTaskField({ workspaceId, date, onClose }: Props) {
   const [title, setTitle] = useState('')
   useEscape(onClose)
@@ -21,7 +21,7 @@ export function AddTaskField({ workspaceId, date, onClose }: Props) {
       onClose()
       return
     }
-    // Поле остаётся открытым: подряд обычно заводят несколько задач.
+    // Keep the field open: people usually add several tasks in a row.
     setTitle('')
     await createTask(workspaceId, { title: value, due_date: date })
   }

@@ -2,12 +2,12 @@ import Dexie, { type EntityTable } from 'dexie'
 import type { Label, Note, Task, Workspace } from './types'
 
 /*
- * Локальная база — источник правды для интерфейса.
- * Всё читается и пишется сюда, сеть работает отдельно и асинхронно.
- * Приложение полностью функционально без соединения.
+ * The local database is the source of truth for the UI.
+ * Everything is read from and written to it; the network works separately and
+ * asynchronously. The app is fully usable with no connection at all.
  */
 
-/** Флаг «строка изменена локально и ещё не уехала на сервер». */
+/** Flag for "row changed locally and has not reached the server yet". */
 export type Dirty = 0 | 1
 
 export type Local<T> = T & { _dirty: Dirty }
@@ -26,9 +26,9 @@ export class DandoriDB extends Dexie {
 
   constructor() {
     super('dandori')
-    // Индексы ровно под те запросы, которые есть: выборка воркспейса,
-    // сбор грязных строк на отправку и чтение по id. Сортировка идёт в памяти —
-    // задач в воркспейсе сотни, а не миллионы.
+    // Indexes match exactly the queries we actually make: pick one workspace,
+    // collect the dirty rows for a push, and read by id. Sorting happens in
+    // memory — a workspace holds hundreds of tasks, not millions.
     this.version(1).stores({
       workspaces: 'id, position, _dirty',
       labels: 'id, workspace_id, _dirty',
@@ -50,7 +50,7 @@ export async function setMeta(key: string, value: string): Promise<void> {
   await db.meta.put({ key, value })
 }
 
-/** Полная очистка локальных данных — при выходе из аккаунта. */
+/** Wipes all local data — used on sign-out. */
 export async function wipeLocal(): Promise<void> {
   await db.transaction('rw', db.workspaces, db.labels, db.tasks, db.notes, db.meta, async () => {
     await Promise.all([

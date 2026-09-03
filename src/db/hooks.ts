@@ -3,13 +3,14 @@ import { db } from './local'
 import type { ID, Label, Note, Task, Workspace } from './types'
 
 /*
- * Реактивное чтение из локальной базы.
- * Любая запись — своя или приехавшая с сервера — сама перерисует интерфейс.
+ * Reactive reads from the local database.
+ * Any write — ours or one that arrived from the server — re-renders the UI on its own.
  *
- * У хуков одной записи три состояния: `undefined` — база ещё не ответила,
- * `null` — записи нет или её удалили, объект — запись есть. Слить первые два
- * нельзя: тогда не отличить загрузку от удаления на другом устройстве,
- * и открытый диалог не узнает, что пора закрываться.
+ * The single-row hooks have three states: `undefined` means the database has not
+ * answered yet, `null` means the row is missing or was deleted, an object means
+ * the row is there. The first two must not be merged: loading would then be
+ * indistinguishable from a delete on another device, and an open dialog would
+ * never learn that it should close.
  */
 
 export function useWorkspaces(): Workspace[] | undefined {

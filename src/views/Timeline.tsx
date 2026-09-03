@@ -14,40 +14,40 @@ import { labelVar, taskLabels } from '../lib/labels'
 import './Timeline.css'
 
 export interface TimelineProps {
-  /** Уже отфильтрованы по меткам. */
+  /** Already filtered by label. */
   tasks: Task[]
   labels: Label[]
   onOpenTask: (id: ID) => void
 }
 
-/** Запас по краям, чтобы крайние полоски не упирались в границу шкалы. */
+/** Padding at the edges so the outermost bars do not butt against the scale border. */
 const PAD_DAYS = 3
-/** Короткая шкала выглядит обрезанной: показываем минимум месяц вперёд от сегодня. */
+/** A short scale looks truncated: always show at least a month ahead of today. */
 const MIN_SPAN_DAYS = 30
-/** Страховка от даты-выброса: шкала не разворачивается на десятки тысяч колонок. */
+/** Guard against an outlier date: the scale must not unfold into tens of thousands of columns. */
 const MAX_SPAN_DAYS = 1830
 const MIN_DAY_W = 6
 const MIN_DAY_W_COMPACT = 20
 const MAX_DAY_W = 44
-/** Уже этой ширины числа сливаются — остаются только начала недель. */
+/** Below this width the day numbers run together — only week starts keep a label. */
 const DAY_LABEL_W = 20
-/** Узкому месяцу подпись не влезает — остаётся только граница. */
+/** A narrow month cannot fit its label — only the boundary is left. */
 const MONTH_LABEL_W = 56
 const NAME_W = 184
 const NAME_W_COMPACT = 116
 const COMPACT_W = 620
-/** Место под вертикальный скроллбар, иначе шкала сама себе устраивает скролл. */
+/** Room for the vertical scrollbar, otherwise the scale scrolls itself sideways. */
 const GUTTER = 10
 
 const NEUTRAL = 'var(--text-faint)'
 
 interface Row {
   task: Task
-  /** Левый край полоски. */
+  /** Left edge of the bar. */
   from: ISODate
-  /** Правый край полоски. */
+  /** Right edge of the bar. */
   to: ISODate
-  /** Дата одна — рисуем веху, а не полоску. */
+  /** A single date — draw a milestone instead of a bar. */
   milestone: boolean
   color: string
   overdue: boolean
@@ -67,7 +67,7 @@ interface Month {
   label: string
 }
 
-/** Все задачи с датами на одной шкале: где начинается, где дедлайн, где просрочено. */
+/** Every dated task on one scale: where it starts, where the deadline is, what is overdue. */
 export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
   const now = useToday()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -77,7 +77,7 @@ export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
   useEffect(() => {
     const el = rootRef.current
     if (!el) return
-    // Ширину дня считаем от контейнера, поэтому следим за его размером.
+    // Day width is derived from the container, so watch the root element's size.
     const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width))
     ro.observe(el)
     return () => ro.disconnect()
@@ -95,7 +95,7 @@ export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
   const trackW = dayW * days.length
   const todayIndex = diffDays(days[0], now)
 
-  // На телефоне шкала шире экрана — при открытии показываем окрестности сегодня.
+  // On a phone the scale is wider than the screen — open around today.
   const scrolled = useRef(false)
   useEffect(() => {
     const el = scrollRef.current
@@ -179,7 +179,7 @@ function TimelineRow({
   onOpen: (id: ID) => void
 }) {
   const { task } = row
-  // Шкала могла быть подрезана по MAX_SPAN_DAYS — тогда полоска прижимается к краю.
+  // The scale may have been clipped to MAX_SPAN_DAYS — then the bar sticks to the edge.
   const start = clamp(diffDays(first, row.from), 0, count - 1)
   const end = clamp(diffDays(first, row.to), 0, count - 1)
   const span = end - start + 1
@@ -216,7 +216,7 @@ function TimelineRow({
   )
 }
 
-// ------------------------------------------------------------------- подсчёты
+// ----------------------------------------------------------------- calculations
 
 function buildRows(tasks: Task[], labels: Label[], now: ISODate): Row[] {
   const rows: Row[] = []
@@ -228,7 +228,7 @@ function buildRows(tasks: Task[], labels: Label[], now: ISODate): Row[] {
     if (!single) continue
 
     const [label] = taskLabels(task, labels)
-    // Дедлайн раньше начала карточка не запрещает: рисуем по фактическим краям.
+    // The task dialog allows a deadline before the start: draw by the actual edges.
     rows.push({
       task,
       from: s && d ? (s < d ? s : d) : single,
@@ -249,8 +249,8 @@ function buildRows(tasks: Task[], labels: Label[], now: ISODate): Row[] {
 }
 
 /**
- * Диапазон шкалы: от самой ранней даты до самой поздней, сегодня всегда внутри
- * и правый край не ближе месяца от него.
+ * Range of the scale: from the earliest date to the latest, with today always
+ * inside it and the right edge no closer than a month away from today.
  */
 function buildScale(rows: Row[], now: ISODate): ISODate[] {
   let min = now
@@ -294,7 +294,7 @@ function buildGrid(days: ISODate[]): { cells: Cell[]; months: Month[]; weekOffse
 }
 
 function fitDayWidth(raw: number, min: number): number {
-  // Дробная ширина допустима, но округляем — иначе накапливается расхождение с сеткой.
+  // A fractional width is fine, but round it — otherwise drift from the grid piles up.
   const w = Math.floor(raw * 100) / 100
   return Math.min(MAX_DAY_W, Math.max(min, w))
 }

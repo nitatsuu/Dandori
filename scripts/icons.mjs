@@ -1,5 +1,5 @@
-// Генерация PNG-иконок PWA из public/favicon.svg.
-// Запуск: npm run icons. Результат коммитится, на сборке не выполняется.
+// Generates the PWA PNG icons from public/favicon.svg.
+// Run: npm run icons. The result is committed, the build does not run this.
 import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -12,12 +12,12 @@ const source = await readFile(join(publicDir, 'favicon.svg'))
 
 const render = (size) => sharp(source, { density: 512 }).resize(size, size).png({ compressionLevel: 9 }).toBuffer()
 
-// Обычные иконки: рисунок во весь квадрат.
+// Plain icons: the drawing fills the whole square.
 for (const size of [192, 512]) {
   await writeFile(join(publicDir, `icon-${size}.png`), await render(size))
 }
 
-// apple-touch-icon: без прозрачности, углы скругляет сама iOS.
+// apple-touch-icon: no transparency, iOS rounds the corners itself.
 await writeFile(
   join(publicDir, 'apple-touch-icon.png'),
   await sharp({ create: { width: 180, height: 180, channels: 4, background: bg } })
@@ -26,7 +26,7 @@ await writeFile(
     .toBuffer(),
 )
 
-// Maskable: рисунок ужат в безопасную зону, фон во весь квадрат.
+// Maskable: the drawing is squeezed into the safe zone, the background fills the square.
 const inner = 336
 await writeFile(
   join(publicDir, 'icon-maskable-512.png'),
@@ -36,4 +36,4 @@ await writeFile(
     .toBuffer(),
 )
 
-console.log('иконки готовы: icon-192.png, icon-512.png, icon-maskable-512.png, apple-touch-icon.png')
+console.log('icons generated: icon-192.png, icon-512.png, icon-maskable-512.png, apple-touch-icon.png')

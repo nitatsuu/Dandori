@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 
-/** Закрытие по Escape. Один слушатель вместо копии в каждом всплывающем окне. */
+/** Close on Escape. One listener instead of a copy in every popup. */
 export function useEscape(onEscape: () => void): void {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {

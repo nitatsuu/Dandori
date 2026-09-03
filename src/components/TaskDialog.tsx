@@ -15,15 +15,15 @@ interface Props {
   onClose: () => void
 }
 
-/** Карточка целиком: название, описание, даты, метки, произвольные поля. */
+/** The whole task card: title, description, dates, labels, custom fields. */
 export function TaskDialog({ taskId, workspaceId, labels, onClose }: Props) {
   const task = useTask(taskId)
   const [preview, setPreview] = useState(false)
 
   useEscape(onClose)
 
-  // Задачу могли удалить на другом устройстве, пока карточка была открыта.
-  // `undefined` — база ещё не ответила, `null` — задачи действительно нет.
+  // The task may have been deleted on another device while this dialog was open.
+  // `undefined` means the database has not answered yet, `null` means it is really gone.
   useEffect(() => {
     if (task === null) onClose()
   }, [task, onClose])
@@ -68,9 +68,9 @@ function Body({
     [id],
   )
 
-  // Название и описание пишутся с задержкой: запись на каждое нажатие клавиши
-  // приводила к потере символов — значение поля приходит из базы асинхронно
-  // и успевало откатить уже набранное.
+  // Title and description are saved on a delay: writing on every keystroke lost
+  // characters — the field value comes back from the database asynchronously and
+  // would roll back what had already been typed.
   const [title, setTitle] = useAutosave(task.title, (v) => patch({ title: v }))
   const [description, setDescription] = useAutosave(task.description, (v) =>
     patch({ description: v }),
@@ -79,9 +79,10 @@ function Body({
   const html = useMemo(() => (preview ? renderMarkdown(description) : ''), [preview, description])
 
   /*
-   * Поле `type=date` шлёт onChange на каждый набранный символ. Пока человек
-   * печатает год, браузер успевает отдать промежуточное «0202-03-01», и такая
-   * дата уезжает в базу и в таймлайн. Записываем только правдоподобные даты.
+   * A `type=date` input fires onChange on every typed character. While someone is
+   * still typing the year the browser hands over an intermediate «0202-03-01», and
+   * that date would travel into the database and the timeline. Only write dates
+   * that look plausible.
    */
   function patchDate(key: 'start_date' | 'due_date', raw: string) {
     if (raw === '') return patch({ [key]: null })
@@ -220,7 +221,7 @@ function Field({
   )
 }
 
-// ---------------------------------------------------------------------- метки
+// --------------------------------------------------------------------- labels
 
 type LabelMode = 'pick' | 'new' | 'manage'
 
@@ -360,7 +361,7 @@ function ColorPicker({
   )
 }
 
-// ---------------------------------------------------------- произвольные поля
+// --------------------------------------------------------------- custom fields
 
 function CustomFields({
   fields,

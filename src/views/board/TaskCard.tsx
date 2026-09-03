@@ -14,15 +14,15 @@ import { accent, cardClass } from './model'
 interface Props {
   task: Task
   labels: Label[]
-  /** Ключ колонки, в которой нарисована карточка: по нему опознаётся цель дропа. */
+  /** Key of the column the card is drawn in: it identifies the drop target. */
   column: string
   compact?: boolean
-  /** Дата на карточке нужна там, где её не видно по шапке колонки. */
+  /** Show the date on the card where the column header does not already give it away. */
   showDate?: boolean
   onOpen: (id: ID) => void
 }
 
-/** Порог, ниже которого отпускание считается кликом, а не перетаскиванием. */
+/** Threshold below which a release counts as a click rather than a drag. */
 const CLICK_SLOP = 5
 
 export function TaskCard({ task, labels, column, compact, showDate, onOpen }: Props) {
@@ -42,7 +42,7 @@ export function TaskCard({ task, labels, column, compact, showDate, onOpen }: Pr
     pressed.current = { x: e.clientX, y: e.clientY }
   }
 
-  // Карточку, которую только что таскали, открывать не нужно.
+  // Do not open a card that was just being dragged.
   function onClick(e: ReactMouseEvent) {
     const from = pressed.current
     pressed.current = null
@@ -65,7 +65,7 @@ export function TaskCard({ task, labels, column, compact, showDate, onOpen }: Pr
   )
 }
 
-/** Тело карточки: то же самое рисуется под пальцем в DragOverlay. */
+/** Card body: the same markup is drawn under the finger in the DragOverlay. */
 export function CardBody({
   task,
   labels,
@@ -84,7 +84,7 @@ export function CardBody({
         className="board__check"
         checked={task.done}
         aria-label="Готово"
-        // Гасим и mousedown, и touchstart: на них висит запуск перетаскивания карточки.
+        // Swallow mousedown, touchstart and pointerdown alike: the card's drag start hangs off them.
         onMouseDown={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}

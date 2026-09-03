@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { signIn } from '../auth/useSession'
 import './SignIn.css'
 
-/** Вход по email и паролю. Регистрации нет: аккаунт заводится в панели Supabase. */
+/** Email and password sign-in. There is no sign-up: accounts are created in the Supabase dashboard. */
 export function SignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

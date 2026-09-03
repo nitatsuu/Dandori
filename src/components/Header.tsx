@@ -69,7 +69,7 @@ export function Header(props: Props) {
   )
 }
 
-// ------------------------------------------------------------- воркспейсы
+// ------------------------------------------------------------- workspaces
 
 function WorkspaceMenu({
   workspaces,
@@ -122,7 +122,7 @@ function WorkspaceMenu({
   )
 }
 
-// --------------------------------------------------------------- настройки
+// ----------------------------------------------------------------- settings
 
 function SettingsMenu({
   current,
@@ -164,7 +164,7 @@ function SettingsMenu({
     a.href = url
     a.download = `dandori-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
-    // Синхронный отзыв успевает отменить скачивание в части браузеров.
+    // Revoking synchronously cancels the download in some browsers, so defer it.
     setTimeout(() => URL.revokeObjectURL(url), 10_000)
     setOpen(false)
   }
@@ -212,8 +212,8 @@ function SettingsMenu({
 function useOutsideClick<T extends HTMLElement>(onOutside: () => void) {
   const ref = useRef<T>(null)
 
-  // Колбэк приходит новой стрелкой на каждый рендер: держим его в ref,
-  // иначе слушатель переподписывается постоянно.
+  // The callback arrives as a fresh arrow function on every render: keep it in a
+  // ref, otherwise the listener would resubscribe all the time.
   const cb = useRef(onOutside)
   useEffect(() => {
     cb.current = onOutside

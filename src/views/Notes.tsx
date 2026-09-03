@@ -29,11 +29,11 @@ export function Notes({ workspaceId }: NotesProps) {
   const notes = useNotes(workspaceId) ?? emptyOf<Note>()
 
   const [selectedId, setSelectedId] = useState<ID | null>(null)
-  // Раскрытие папок — состояние экрана, а не данные: в базу не пишется.
+  // Folder expansion is screen state, not data: it is never written to the database.
   const [expanded, setExpanded] = useState<ReadonlySet<ID>>(() => new Set())
   const [renamingId, setRenamingId] = useState<ID | null>(null)
   const [menu, setMenu] = useState<Menu | null>(null)
-  // Телефон: дерево и редактор не помещаются рядом, показываем что-то одно.
+  // Phone: the tree and the editor do not fit side by side, so show one at a time.
   const [detail, setDetail] = useState(false)
 
   const selected = notes.find((n) => n.id === selectedId) ?? null
@@ -60,7 +60,7 @@ export function Notes({ workspaceId }: NotesProps) {
     const id = await createNote(workspaceId, kind, parentId, '')
     if (parentId) setExpanded((prev) => new Set(prev).add(parentId))
     setSelectedId(id)
-    // Свежесозданное сразу под переименование: имя по умолчанию мало кому подходит.
+    // Put a freshly created item straight into rename mode: the default name suits almost nobody.
     setRenamingId(id)
   }
 
@@ -74,7 +74,7 @@ export function Notes({ workspaceId }: NotesProps) {
     const what =
       note.kind === 'folder' ? `папку «${note.name}» со всем содержимым` : `заметку «${note.name}»`
     if (!confirm(`Удалить ${what}?`)) return
-    // Поддерево гасит сам deleteNote, дублировать обход тут нечего.
+    // deleteNote takes down the subtree itself, no need to duplicate the walk here.
     void deleteNote(note.id)
   }
 
@@ -174,9 +174,10 @@ function clampX(x: number): number {
 }
 
 /**
- * Плоский список видимых строк с глубиной.
- * Внутри уровня папки выше файлов, дальше по position.
- * Запись с потерянным родителем поднимается в корень, иначе она пропала бы из дерева.
+ * Flat list of visible rows with their depth.
+ * Within a level folders come before files, then by position.
+ * A record whose parent is gone is lifted to the root, otherwise it would
+ * disappear from the tree entirely.
  */
 function visibleRows(notes: Note[], expanded: ReadonlySet<ID>): Row[] {
   const known = new Set(notes.map((n) => n.id))
@@ -206,7 +207,7 @@ function visibleRows(notes: Note[], expanded: ReadonlySet<ID>): Row[] {
   return rows
 }
 
-// ------------------------------------------------------------- переименование
+// ------------------------------------------------------------------ renaming
 
 function RenameInput({
   value,
@@ -236,7 +237,7 @@ function RenameInput({
   )
 }
 
-// ----------------------------------------------------------- контекстное меню
+// -------------------------------------------------------------- context menu
 
 function RowMenu({
   x,
@@ -287,7 +288,7 @@ function RowMenu({
   )
 }
 
-// -------------------------------------------------------------------- редактор
+// -------------------------------------------------------------------- editor
 
 function NoteEditor({ note, onBack }: { note: Note; onBack: () => void }) {
   const [preview, setPreview] = useState(false)

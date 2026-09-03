@@ -17,11 +17,11 @@ import type { ID, Label, Task } from './db/types'
 import './App.css'
 
 export function App() {
-  const { session, loading } = useSession()
+  const { signedIn, loading } = useSession()
   const [theme, setTheme] = useTheme()
 
   if (loading) return null
-  if (!session) return <SignIn />
+  if (!signedIn) return <SignIn />
 
   return <Shell theme={theme} onSetTheme={setTheme} />
 }
@@ -43,7 +43,7 @@ function Shell({ theme, onSetTheme }: { theme: Theme; onSetTheme: (t: Theme) => 
 
   useBootstrap(workspaces)
 
-  // Фильтр по меткам сбрасывается при смене воркспейса: метки там другие.
+  // Reset the label filter when the workspace changes: the other workspace has its own labels.
   const [filteredFor, setFilteredFor] = useState(workspaceId)
   if (filteredFor !== workspaceId) {
     setFilteredFor(workspaceId)
@@ -116,11 +116,11 @@ function Shell({ theme, onSetTheme }: { theme: Theme; onSetTheme: (t: Theme) => 
 }
 
 /**
- * Запуск синхронизации и стартовые воркспейсы.
+ * Starts sync and seeds the initial workspaces.
  *
- * Заводить их можно только после первого обмена с сервером: локальная база
- * отвечает пустым списком мгновенно, и без ожидания второе устройство завело бы
- * себе вторую пару «Работа»/«Университет».
+ * Seeding may only happen after the first exchange with the server: the local
+ * database answers with an empty list instantly, and without that wait a second
+ * device would create its own duplicate pair of starter workspaces.
  */
 function useBootstrap(workspaces: ReturnType<typeof useWorkspaces>) {
   const [pulled, setPulled] = useState(false)

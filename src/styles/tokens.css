@@ -1,6 +1,6 @@
 /*
- * Палитра и размеры. Плотная сетка: интерфейс рассчитан на то,
- * чтобы на доске помещалось как можно больше дней.
+ * Palette and sizes. A dense scale: the UI is built to fit as many day columns
+ * on the board as possible.
  */
 
 :root {
@@ -29,7 +29,7 @@
   --day-col-w: 220px;
   --day-col-w-mobile: 78vw;
 
-  /* Палитра меток. Названия задаёт пользователь, здесь только цвета. */
+  /* Label palette. The names are the user's, only the colors live here. */
   --label-red: #e5484d;
   --label-orange: #f76b15;
   --label-amber: #ffb224;
@@ -41,7 +41,7 @@
   --label-slate: #7b8496;
 }
 
-/* Светлая тема — база */
+/* Light theme — the baseline */
 :root,
 :root[data-theme="light"] {
   color-scheme: light;
@@ -71,7 +71,7 @@
   --shadow-pop: 0 8px 28px rgba(16, 20, 30, 0.18);
 }
 
-/* Тёмная тема — системная настройка */
+/* Dark theme — from the system setting */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
@@ -102,7 +102,7 @@
   }
 }
 
-/* Тёмная тема — выбрана вручную */
+/* Dark theme — picked manually */
 :root[data-theme="dark"] {
   color-scheme: dark;
 

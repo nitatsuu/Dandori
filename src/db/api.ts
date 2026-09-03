@@ -12,15 +12,16 @@ import type {
 } from './types'
 
 /*
- * Единственный способ, которым интерфейс трогает данные.
- * Всё пишется в локальную базу сразу, отправка на сервер — фоном.
- * Прямых обращений к Supabase из компонентов быть не должно.
+ * The only way the UI touches data.
+ * Everything is written to the local database right away; the push to the
+ * server happens in the background.
+ * Components must never talk to Supabase directly.
  */
 
 const now = () => new Date().toISOString()
 const uid = () => crypto.randomUUID()
 
-/** Локальная запись помечается грязной и ставится в очередь на отправку. */
+/** Marks a local row dirty and queues it for the next push. */
 function touch<T extends { updated_at: string }>(row: T): Local<T> {
   return { ...row, updated_at: now(), _dirty: 1 as const }
 }
@@ -29,10 +30,10 @@ function queue() {
   void requestPush()
 }
 
-/** Шаг позиции: между соседями всегда остаётся место. */
+/** Position step: there is always room left between neighbours. */
 const POS_STEP = 1000
 
-// ---------------------------------------------------------------- воркспейсы
+// ---------------------------------------------------------------- workspaces
 
 export async function listWorkspaces(): Promise<Workspace[]> {
   const rows = await db.workspaces.orderBy('position').toArray()
@@ -63,7 +64,7 @@ export async function renameWorkspace(id: ID, name: string): Promise<void> {
   queue()
 }
 
-/** Удаление воркспейса гасит и всё его содержимое, иначе сирот не собрать. */
+/** Deleting a workspace soft-deletes its content too, or the orphans stay out of reach. */
 export async function deleteWorkspace(id: ID): Promise<void> {
   await db.transaction('rw', db.workspaces, db.labels, db.tasks, db.notes, async () => {
     const ws = await db.workspaces.get(id)
@@ -79,7 +80,7 @@ export async function deleteWorkspace(id: ID): Promise<void> {
   queue()
 }
 
-// --------------------------------------------------------------------- метки
+// -------------------------------------------------------------------- labels
 
 export async function listLabels(workspaceId: ID): Promise<Label[]> {
   const rows = await db.labels.where('workspace_id').equals(workspaceId).toArray()
@@ -119,7 +120,7 @@ export async function updateLabel(
   queue()
 }
 
-/** Метка снимается со всех задач, иначе останутся висячие идентификаторы. */
+/** The label is stripped from every task, otherwise dangling ids are left behind. */
 export async function deleteLabel(id: ID): Promise<void> {
   await db.transaction('rw', db.labels, db.tasks, async () => {
     const label = await db.labels.get(id)
@@ -135,7 +136,7 @@ export async function deleteLabel(id: ID): Promise<void> {
   queue()
 }
 
-// -------------------------------------------------------------------- задачи
+// --------------------------------------------------------------------- tasks
 
 export async function listTasks(workspaceId: ID): Promise<Task[]> {
   const rows = await db.tasks.where('workspace_id').equals(workspaceId).toArray()
@@ -198,7 +199,7 @@ export async function updateTask(id: ID, patch: TaskPatch): Promise<void> {
   const row = await db.tasks.get(id)
   if (!row) return
   const next = { ...row, ...patch }
-  // Смена дня — это смена колонки, задача встаёт в её конец.
+  // Changing the day means changing the column, so the task goes to its end.
   if (patch.due_date !== undefined && patch.due_date !== row.due_date) {
     next.position = await nextTaskPosition(row.workspace_id, patch.due_date)
   }
@@ -221,13 +222,13 @@ export async function deleteTask(id: ID): Promise<void> {
 }
 
 /**
- * Перенос задачи в колонку дня перед задачей `beforeId`; `null` — в конец колонки.
- * `due` = null — колонка «Без даты».
+ * Moves a task into a day column, in front of task `beforeId`; `null` puts it at the end.
+ * `due` = null is the "no date" column.
  *
- * Место задаётся соседом, а не номером: на доске может стоять фильтр по меткам,
- * и номер в отфильтрованном списке не совпадает с номером в колонке целиком.
+ * The slot is given by a neighbour, not by an index: the board can have a label
+ * filter on, and an index in the filtered list is not the index in the whole column.
  *
- * Позиции колонки пересчитываются целиком: задач в дне единицы, экономить не на чем.
+ * The whole column is renumbered: a day holds a handful of tasks, there is nothing to save.
  */
 export async function moveTask(id: ID, due: ISODate | null, beforeId: ID | null): Promise<void> {
   await db.transaction('rw', db.tasks, async () => {
@@ -254,7 +255,7 @@ export async function moveTask(id: ID, due: ISODate | null, beforeId: ID | null)
   queue()
 }
 
-// ------------------------------------------------------------------- заметки
+// --------------------------------------------------------------------- notes
 
 export async function listNotes(workspaceId: ID): Promise<Note[]> {
   const rows = await db.notes.where('workspace_id').equals(workspaceId).toArray()
@@ -297,7 +298,7 @@ export async function updateNote(
   queue()
 }
 
-/** Папка уходит вместе со всем поддеревом. */
+/** A folder goes away together with its whole subtree. */
 export async function deleteNote(id: ID): Promise<void> {
   await db.transaction('rw', db.notes, async () => {
     const root = await db.notes.get(id)
@@ -323,9 +324,9 @@ export async function deleteNote(id: ID): Promise<void> {
   queue()
 }
 
-// ------------------------------------------------------------------- экспорт
+// -------------------------------------------------------------------- export
 
-/** Выгрузка всего в один файл: страховка на случай ухода с Supabase. */
+/** Dumps everything into one file: insurance in case we ever leave Supabase. */
 export async function exportAll(): Promise<string> {
   const strip = <T extends object>(rows: Local<T>[]) =>
     rows.filter((r) => !(r as { deleted?: boolean }).deleted).map(({ _dirty, ...rest }) => rest)

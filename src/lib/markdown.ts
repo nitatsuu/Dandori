@@ -1,16 +1,16 @@
 import { marked } from 'marked'
 
 /*
- * Разбор markdown для показа через dangerouslySetInnerHTML.
+ * Markdown parsing for rendering through dangerouslySetInnerHTML.
  *
- * `marked` по умолчанию пропускает сырой HTML насквозь. Заметка или описание
- * задачи с `<img src=x onerror=...>` выполнили бы скрипт в контексте приложения,
- * а там в localStorage лежит токен сессии Supabase. Текст пишет сам владелец,
- * но он же его копирует откуда попало и синхронизирует между устройствами,
- * поэтому доверять содержимому нельзя.
+ * By default `marked` lets raw HTML through untouched. A note or a task
+ * description containing `<img src=x onerror=...>` would run a script in the
+ * app's context, and that is where the Supabase session token sits in
+ * localStorage. The owner writes the text himself, but he also pastes it in
+ * from anywhere and syncs it between devices, so the content cannot be trusted.
  *
- * Сырой HTML экранируется и показывается как текст, ссылки пропускаются только
- * с безопасной схемой. Отдельная библиотека-санитайзер для этого не нужна.
+ * Raw HTML is escaped and shown as text, and links pass only with a safe scheme.
+ * A separate sanitizer library is not needed for this.
  */
 
 function escapeHtml(s: string): string {
@@ -40,7 +40,7 @@ marked.use({
 
     image(token) {
       const src = safeUrl(String(token.href ?? ''))
-      // Битую или опасную ссылку показываем исходным текстом, а не пустой рамкой.
+      // Show a broken or unsafe link as its source text, not as an empty frame.
       if (!src) return escapeHtml(token.raw)
       return `<img src="${escapeHtml(src)}" alt="${escapeHtml(String(token.text ?? ''))}" loading="lazy">`
     },

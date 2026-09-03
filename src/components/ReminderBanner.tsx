@@ -5,8 +5,8 @@ import type { ID, Task } from '../db/types'
 import './ReminderBanner.css'
 
 /*
- * Единственный способ, которым приложение о чём-то напоминает.
- * Push-уведомлений нет: плашка видна, только когда приложение открыто.
+ * The only way this app reminds you of anything.
+ * There are no push notifications: the banner is visible only while the app is open.
  */
 
 interface Props {

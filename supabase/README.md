@@ -1,13 +1,13 @@
-# Настройка Supabase
+# Supabase setup
 
-1. Создать проект на [supabase.com](https://supabase.com), регион — поближе.
-2. SQL Editor → вставить `schema.sql` → Run.
-3. Authentication → Providers → Email: оставить включённым,
-   **Confirm email** выключить (аккаунт один, подтверждать некому).
-4. Authentication → Users → Add user: завести свой аккаунт вручную.
-   Открытой регистрации в приложении нет.
-5. Project Settings → API: скопировать `URL` и `anon public` ключ
-   в `.env.local` по образцу `.env.example`.
+1. Create a project on [supabase.com](https://supabase.com), pick a nearby region.
+2. SQL Editor → paste `schema.sql` → Run.
+3. Authentication → Providers → Email: leave it enabled,
+   turn **Confirm email** off (there is one account, nobody to confirm it for).
+4. Authentication → Users → Add user: create your own account by hand.
+   There is no open sign-up in the app.
+5. Project Settings → API: copy the `URL` and the `anon public` key
+   into `.env.local`, following `.env.example`.
 
-Ключ `service_role` в приложении не нужен и в репозиторий не попадает
-ни при каких обстоятельствах: он обходит RLS.
+The `service_role` key is not needed by the app and never gets into the repository
+under any circumstances: it bypasses RLS.

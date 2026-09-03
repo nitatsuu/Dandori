@@ -35,7 +35,7 @@ import './Board.css'
 
 export interface BoardProps {
   workspaceId: ID
-  /** Уже отфильтрованы по меткам. */
+  /** Already filtered by label. */
   tasks: Task[]
   labels: Label[]
   mode: BoardMode
@@ -44,8 +44,9 @@ export interface BoardProps {
 }
 
 /*
- * Скользящее окно режима «14 дней»: вчера, сегодня и 13 дней вперёд.
- * Один день назад нужен, чтобы вчерашний дедлайн не исчезал с доски в полночь.
+ * Sliding window of the «14 дней» mode: yesterday, today and 13 days ahead.
+ * The one day back is there so a yesterday deadline does not vanish from the
+ * board at midnight.
  */
 const WINDOW_BACK = 1
 const WINDOW_FORWARD = 13
@@ -58,13 +59,13 @@ export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask 
     () => dateRange(addDays(now, -WINDOW_BACK), addDays(now, WINDOW_FORWARD)),
     [now],
   )
-  // Просроченное, до которого в окне не доскроллить. Колонки нет, пока нечего показывать.
+  // Overdue tasks the window cannot scroll back to. No column while there is nothing to show.
   const overdue = useMemo(() => collectOverdue(groups, now, days), [groups, now, days])
   const [dragged, setDragged] = useState<ID | null>(null)
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
-    // Без задержки палец не смог бы прокручивать колонку: любое касание тащило бы карточку.
+    // Without the delay a finger could not scroll a column: any touch would drag a card.
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
   )
 
@@ -77,11 +78,11 @@ export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask 
     if (!task) return
 
     const overId = String(over.id)
-    // Отпустили либо на колонке, либо на карточке — у карточки колонка лежит в data.
+    // The drop landed either on a column or on a card — a card carries its column in data.
     const onColumn = keyFromColumnId(overId)
     const key = onColumn ?? (over.data.current?.column as string | undefined) ?? null
     if (key === null) return
-    // В «Просрочено» класть нечего: своей даты у колонки нет.
+    // Nothing can be dropped into «Просрочено»: the column has no date of its own.
     if (key === OVERDUE) return
 
     const column = groups.get(key) ?? emptyOf<Task>()
@@ -89,23 +90,24 @@ export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask 
 
     let index: number
     if (onColumn !== null) {
-      // Отпустили на пустом месте колонки — задача встаёт в конец.
+      // Dropped on empty space in the column — the task goes to the end.
       index = rest.length
     } else {
       const at = rest.findIndex((t) => t.id === overId)
       if (at < 0) return
-      // Перенос вниз внутри своей колонки ставит карточку после той, над которой отпустили.
+      // Moving down inside its own column puts the card after the one it was released over.
       const from = column.findIndex((t) => t.id === id)
       const to = column.findIndex((t) => t.id === overId)
       index = from >= 0 && from < to ? at + 1 : at
     }
 
-    // Карточку вернули на прежнее место: лишняя запись только зря разбудит синхронизацию.
+    // The card was put back where it was: a pointless write would only wake sync for nothing.
     const before = groups.get(columnKey(task.due_date)) ?? emptyOf<Task>()
     if (before === column && before[index]?.id === id) return
 
-    // Место задаётся соседом: при активном фильтре номер в видимом списке
-    // не совпадает с номером в колонке целиком.
+    // The position is given by the neighbouring task, not by an index: with a
+    // filter on, the index in the visible list does not match the index in the
+    // full column.
     void moveTask(id, dateFromKey(key), rest[index]?.id ?? null)
   }
 
@@ -177,7 +179,7 @@ export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask 
   )
 }
 
-// ------------------------------------------------------------------- колонки
+// ------------------------------------------------------------------- columns
 
 interface StripProps {
   workspaceId: ID
@@ -199,7 +201,7 @@ function Strip({
   onOpenTask,
 }: StripProps & {
   days: ISODate[]
-  /** Только в режиме «14 дней»: в ленте до прошлого можно доскроллить. */
+  /** Only in «14 дней» mode: the ribbon can scroll back into the past on its own. */
   overdue?: Task[]
   scroller?: RefObject<HTMLDivElement | null>
   onScroll?: () => void
@@ -208,8 +210,8 @@ function Strip({
   const el = scroller ?? own
   const columns: (ISODate | null)[] = [null, ...days]
 
-  // Открываемся на сегодня: слева стоят «Без даты» и, возможно, «Просрочено»,
-  // и без этого на телефоне доска встречала бы пустой колонкой без даты.
+  // Open on today: «Без даты» and possibly «Просрочено» sit to the left, and
+  // without this the board would greet a phone user with the empty no-date column.
   useLayoutEffect(() => {
     scrollToDay(el.current, today)
   }, [el, today])
@@ -235,9 +237,9 @@ function Strip({
 }
 
 /**
- * Ставит день к левому краю видимой части. Закреплённые колонки перекрывают
- * начало полосы, поэтому их суммарная ширина вычитается; на телефоне
- * закреплённых нет и вычитать нечего.
+ * Puts a day against the left edge of the visible area. Pinned columns cover the
+ * start of the strip, so their combined width is subtracted; on a phone nothing
+ * is pinned and there is nothing to subtract.
  */
 function scrollToDay(el: HTMLDivElement | null, day: ISODate): void {
   if (!el) return
@@ -252,14 +254,14 @@ function scrollToDay(el: HTMLDivElement | null, day: ISODate): void {
   el.scrollLeft = node.offsetLeft - pinned
 }
 
-// --------------------------------------------------------------------- лента
+// -------------------------------------------------------------------- ribbon
 
 const RIBBON_BACK = 14
 const RIBBON_FORWARD = 30
-/** Сколько дней прирастает за раз и сколько их держится в памяти. */
+/** How many days are appended at a time and how many are kept in memory. */
 const RIBBON_CHUNK = 14
 const RIBBON_MAX = 120
-/** На таком расстоянии до края начинаем подгружать дни. */
+/** Start loading more days at this distance from the edge. */
 const RIBBON_EDGE = 900
 
 function Ribbon(props: StripProps) {
@@ -268,10 +270,10 @@ function Ribbon(props: StripProps) {
   const [days, setDays] = useState(() =>
     dateRange(addDays(start, -RIBBON_BACK), addDays(start, RIBBON_FORWARD)),
   )
-  // День, за который держимся, пока окно дней меняется под руками.
+  // The day we hold on to while the window of days changes underneath.
   const anchor = useRef<{ day: ISODate; left: number; scrollLeft: number } | null>(null)
 
-  // Окно сдвинулось — возвращаем полосу туда, где её оставил пользователь.
+  // The window shifted — put the strip back where the user left it.
   useLayoutEffect(() => {
     const el = scroller.current
     const held = anchor.current
@@ -285,7 +287,7 @@ function Ribbon(props: StripProps) {
     const el = scroller.current
     if (!el || anchor.current) return
 
-    // Край, который переживёт подрезку с противоположной стороны.
+    // The edge that will survive the trim on the opposite side.
     const day = side === 'left' ? days[0] : days[days.length - 1]
     const node = el.querySelector<HTMLElement>(`[data-day="${day}"]`)
     if (!node) return

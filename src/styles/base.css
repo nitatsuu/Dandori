@@ -45,7 +45,7 @@ a {
   border-radius: var(--radius);
 }
 
-/* Скроллбары: тонкие, чтобы не съедать место на плотной доске */
+/* Scrollbars: thin, so they don't eat space on a dense board */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
@@ -65,7 +65,7 @@ a {
   background: transparent;
 }
 
-/* Общие мелочи, нужные всем видам */
+/* Shared bits that every view needs */
 
 .btn {
   display: inline-flex;
@@ -124,8 +124,9 @@ a {
 }
 
 /*
- * Разметка markdown. Один блок на всё приложение: описание задачи и заметки
- * рендерятся одинаково, дублировать эти правила под своими именами незачем.
+ * Markdown styles. One block for the whole app: task descriptions and notes
+ * render the same way, so there is no point duplicating these rules under
+ * separate names.
  */
 
 .md > :first-child {

@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import type { ID } from '../db/types'
 
 /*
- * Настройки интерфейса. Живут в localStorage и намеренно не синхронизируются:
- * какая вкладка открыта и какая тема выбрана — дело конкретного устройства.
+ * UI settings. They live in localStorage and deliberately do not sync: which tab
+ * is open and which theme is picked is each device's own business.
  */
 
 const KEYS = {
@@ -25,7 +25,7 @@ function write(key: string, value: string): void {
   try {
     localStorage.setItem(key, value)
   } catch {
-    // Приватный режим или запрет на хранение — настройка просто не переживёт перезагрузку.
+    // Private mode or storage blocked — the setting just won't survive a reload.
   }
 }
 
@@ -46,7 +46,7 @@ function usePersisted<T extends string>(key: string, fallback: T, allowed: reado
   return [value, set] as const
 }
 
-// ------------------------------------------------------------------ вкладки
+// --------------------------------------------------------------------- tabs
 
 export const TABS = ['board', 'timeline', 'notes'] as const
 export type Tab = (typeof TABS)[number]
@@ -61,7 +61,7 @@ export function useTab() {
   return usePersisted<Tab>(KEYS.tab, 'board', TABS)
 }
 
-// --------------------------------------------------------------- режим доски
+// ---------------------------------------------------------------- board mode
 
 export const BOARD_MODES = ['days', 'ribbon', 'month'] as const
 export type BoardMode = (typeof BOARD_MODES)[number]
@@ -76,7 +76,7 @@ export function useBoardMode() {
   return usePersisted<BoardMode>(KEYS.boardMode, 'days', BOARD_MODES)
 }
 
-// ---------------------------------------------------------------------- тема
+// --------------------------------------------------------------------- theme
 
 export const THEMES = ['system', 'light', 'dark'] as const
 export type Theme = (typeof THEMES)[number]
@@ -93,16 +93,16 @@ export function useTheme() {
   return [theme, setTheme] as const
 }
 
-// --------------------------------------------------------------- воркспейсы
+// --------------------------------------------------------------- workspaces
 
 export function useCurrentWorkspace(available: ID[] | undefined) {
   const [chosen, setChosen] = useState<ID | null>(() => read(KEYS.workspace))
 
-  // Сохранённого воркспейса может уже не быть: удалён здесь или на другом устройстве.
-  // Подставляем первый доступный прямо при рендере, чтобы не гонять лишний проход.
+  // The stored workspace may be gone: deleted here or on another device.
+  // Fall back to the first available one during render, to save an extra pass.
   const id = !available ? chosen : chosen && available.includes(chosen) ? chosen : available[0] ?? null
 
-  // Подставленный воркспейс запоминается, чтобы следующий запуск открыл его же.
+  // Remember the workspace we fell back to, so the next launch opens the same one.
   useEffect(() => {
     if (id) write(KEYS.workspace, id)
   }, [id])

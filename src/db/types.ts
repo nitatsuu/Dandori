@@ -1,13 +1,13 @@
-/** Идентификатор — uuid v4, генерируется на клиенте. */
+/** Identifier — a uuid v4, generated on the client. */
 export type ID = string
 
-/** Дата без времени суток, формат `YYYY-MM-DD`. */
+/** A date with no time of day, in `YYYY-MM-DD` format. */
 export type ISODate = string
 
-/** Служебная метка времени, в интерфейсе не показывается. */
+/** Internal timestamp, never shown in the UI. */
 export type Timestamp = string
 
-/** Цвета меток. Названия задаёт пользователь, в коде их нет. */
+/** Label colors. The names are the user's, the code never sees them. */
 export const LABEL_COLORS = [
   'red',
   'orange',
@@ -22,12 +22,12 @@ export const LABEL_COLORS = [
 
 export type LabelColor = (typeof LABEL_COLORS)[number]
 
-/** Поля, общие для всех синхронизируемых записей. */
+/** Fields shared by every synced row. */
 export interface Synced {
   id: ID
   created_at: Timestamp
   updated_at: Timestamp
-  /** Мягкое удаление: иначе удаление на телефоне не доедет до офлайн-ноутбука. */
+  /** Soft delete: a hard delete on the phone would never reach a laptop that is offline. */
   deleted: boolean
 }
 
@@ -43,7 +43,7 @@ export interface Label extends Synced {
   position: number
 }
 
-/** Произвольное поле карточки: пользователь сам задаёт имя и значение. */
+/** Free-form card field: the user picks both the name and the value. */
 export interface CustomField {
   name: string
   value: string
@@ -56,9 +56,9 @@ export interface Task extends Synced {
   start_date: ISODate | null
   due_date: ISODate | null
   done: boolean
-  /** Напомнить за сколько дней до дедлайна. `null` — не напоминать. */
+  /** How many days before the deadline to remind. `null` means no reminder. */
   remind_days_before: number | null
-  /** Порядок внутри своей колонки-дня. */
+  /** Order within its own day column. */
   position: number
   label_ids: ID[]
   custom_fields: CustomField[]
@@ -71,11 +71,11 @@ export interface Note extends Synced {
   parent_id: ID | null
   kind: NoteKind
   name: string
-  /** Пусто у папок. */
+  /** Empty for folders. */
   content: string
   position: number
 }
 
-/** Таблицы, участвующие в синхронизации. */
+/** Tables that take part in sync. */
 export const SYNCED_TABLES = ['workspaces', 'labels', 'tasks', 'notes'] as const
 export type SyncedTable = (typeof SYNCED_TABLES)[number]

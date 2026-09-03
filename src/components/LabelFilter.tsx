@@ -8,7 +8,7 @@ interface Props {
   onToggle: (id: ID) => void
 }
 
-/** Фильтр по меткам. Действует сразу на все виды текущего воркспейса. */
+/** Label filter. It applies to every view of the current workspace at once. */
 export function LabelFilter({ labels, active, onToggle }: Props) {
   const [open, setOpen] = useState(false)
   if (labels.length === 0) return null

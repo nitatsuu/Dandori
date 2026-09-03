@@ -77,7 +77,7 @@
   color: var(--text-dim);
 }
 
-/* Выпадающие меню */
+/* Dropdown menus */
 
 .menu {
   position: relative;
@@ -142,7 +142,7 @@
   background: var(--border);
 }
 
-/* Телефон: вкладки уезжают вниз отдельной панелью */
+/* Phone: the tabs move down into their own bar */
 @media (max-width: 720px) {
   .header__tabs {
     display: none;

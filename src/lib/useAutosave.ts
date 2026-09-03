@@ -3,15 +3,16 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 const SAVE_DELAY = 500
 
 /**
- * Текстовое поле с отложенной записью в базу.
+ * A text field that writes to the database on a delay.
  *
- * Значение приезжает и снаружи — с другого устройства через синхронизацию, —
- * поэтому `synced` хранит то, на чём поле и база сошлись. Пока пришедшее из базы
- * совпадает с ним, это эхо нашей же записи: трогать поле нельзя, иначе курсор
- * прыгнет в конец на каждом сохранении. Настоящая чужая правка подхватывается,
- * но только если своих неотправленных нет — перебивать то, что человек печатает
- * прямо сейчас, хуже, чем разойтись с сервером на пару секунд; дальше работает
- * общий для проекта last-write-wins по `updated_at`.
+ * The value can also arrive from outside — from another device through sync — so
+ * `synced` holds what the field and the database last agreed on. As long as what
+ * comes from the database matches it, this is an echo of our own write: the field
+ * must not be touched, or the caret would jump to the end on every save. A real
+ * edit from elsewhere is picked up, but only when there is nothing unsent of our
+ * own — overwriting what the person is typing right now is worse than being a
+ * couple of seconds out of step with the server; from there the project-wide
+ * last-write-wins by `updated_at` takes over.
  */
 export function useAutosave(remote: string, save: (value: string) => void) {
   const [draft, setDraft] = useState(remote)
@@ -19,7 +20,7 @@ export function useAutosave(remote: string, save: (value: string) => void) {
   const pending = useRef<string | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Ссылка на актуальный колбэк: сам flush остаётся стабильным.
+  // Ref to the current callback, so that flush itself stays stable.
   const saveRef = useRef(save)
   useEffect(() => {
     saveRef.current = save
@@ -44,7 +45,7 @@ export function useAutosave(remote: string, save: (value: string) => void) {
     setDraft(remote)
   }, [remote])
 
-  // Недописанное не должно пропасть при переключении записи.
+  // An unfinished edit must not be lost when switching to another row.
   useEffect(() => flush, [flush])
 
   const change = useCallback(

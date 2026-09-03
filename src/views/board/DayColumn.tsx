@@ -9,7 +9,7 @@ import { TaskCard } from './TaskCard'
 
 interface Props {
   workspaceId: ID
-  /** `null` — закреплённая колонка «Без даты». */
+  /** `null` is the pinned «Без даты» column. */
   date: ISODate | null
   today: ISODate
   tasks: Task[]

@@ -40,7 +40,7 @@
   box-shadow: var(--shadow-card);
 }
 
-/* Дни */
+/* Day columns */
 
 .board__scroller {
   position: relative;
@@ -65,9 +65,9 @@
 }
 
 /*
- * Закреплённые колонки не уезжают при горизонтальном скролле,
- * поэтому фон у них непрозрачный. «Просрочено» стоит вплотную к дням,
- * то есть сразу за «Без даты».
+ * Pinned columns stay put during horizontal scrolling, so their background has
+ * to be opaque. «Просрочено» sits right up against the days, that is, directly
+ * after «Без даты».
  */
 .board__col--nodate,
 .board__col--overdue {
@@ -91,7 +91,7 @@
   color: var(--danger);
 }
 
-/* Дата на карточке просроченного: по шапке колонки её не понять. */
+/* Date on an overdue card: the column header does not tell you which day it is. */
 .board__card-date {
   color: var(--danger);
   font-size: var(--fz-xs);
@@ -174,7 +174,7 @@
   font-size: var(--fz-sm);
 }
 
-/* Карточка */
+/* Task card */
 
 .board__card {
   display: flex;
@@ -246,7 +246,7 @@
   border-radius: 50%;
 }
 
-/* Месяц */
+/* Month view */
 
 .board__month {
   display: flex;
@@ -370,19 +370,19 @@
   height: 5px;
 }
 
-/* Телефон */
+/* Phone */
 
 @media (max-width: 720px) {
   /*
-   * На узком экране не закрепляем ничего. Закреплённых колонок теперь две,
-   * а закреплённая область плюс один день уже занимают весь экран —
-   * вторая туда не влезает. «Без даты» и «Просрочено» становятся обычными
-   * первыми колонками ленты: стартовый скролл стоит на сегодня,
-   * свайп вправо возвращает к ним.
+   * On a narrow screen nothing is pinned. There are two pinned columns now, and
+   * the pinned area plus a single day already fill the whole screen — the second
+   * one has nowhere to go. «Без даты» and «Просрочено» become ordinary leading
+   * columns of the strip instead: the initial scroll sits on today, and a swipe
+   * to the right brings them back.
    */
   .board__scroller {
     scroll-snap-type: x proximity;
-    /* Закреплённых колонок здесь нет, прятать под них нечего. */
+    /* Nothing is pinned here, so there is nothing to scroll clear of. */
     scroll-padding-left: 0;
   }
 
@@ -416,7 +416,7 @@
     padding: var(--sp-1) 0;
   }
 
-  /* В ячейку месяца влезает только полоска цвета метки. */
+  /* A month cell only has room for the label-coloured stripe. */
   .board__cell .board__add {
     display: none;
   }

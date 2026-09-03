@@ -3,7 +3,7 @@
   height: 100%;
 }
 
-/* Дерево */
+/* Tree */
 
 .notes__tree {
   display: flex;
@@ -112,7 +112,7 @@
   opacity: 1;
 }
 
-/* Контекстное меню строки */
+/* Row context menu */
 
 .notes__menu-scrim {
   position: fixed;
@@ -148,7 +148,7 @@
   color: var(--danger);
 }
 
-/* Редактор */
+/* Editor */
 
 .notes__editor {
   display: flex;
@@ -215,7 +215,7 @@
   outline: none;
 }
 
-/* Сама разметка markdown — общий класс .md в base.css, тут только место под неё. */
+/* Markdown styling itself lives in the shared .md class in base.css; only its box is set here. */
 .notes__markdown {
   flex: 1;
   min-height: 0;
@@ -224,7 +224,7 @@
   font-size: var(--fz-md);
 }
 
-/* Телефон: мастер-деталь, дерево и редактор по очереди */
+/* Phone: master-detail, the tree and the editor take turns */
 
 @media (max-width: 720px) {
   .notes__tree {

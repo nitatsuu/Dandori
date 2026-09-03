@@ -1,10 +1,11 @@
--- Схема Dandori. Выполнить целиком в SQL Editor проекта Supabase.
--- Скрипт идемпотентный: повторный запуск ничего не ломает.
+-- The Dandori schema. Run it whole in the SQL Editor of the Supabase project.
+-- The script is idempotent: running it again breaks nothing.
 
--- Все таблицы устроены одинаково:
---   user_id     — владелец, проверяется политиками RLS;
---   updated_at  — для разрешения конфликтов при синхронизации;
---   deleted     — мягкое удаление, иначе удаление на офлайн-устройстве не доедет.
+-- All tables are built the same way:
+--   user_id     — the owner, checked by the RLS policies;
+--   updated_at  — for conflict resolution during sync;
+--   deleted     — soft delete, otherwise a deletion made on an offline device
+--                 never arrives anywhere.
 
 create table if not exists public.workspaces (
   id          uuid primary key,
@@ -34,15 +35,15 @@ create table if not exists public.tasks (
   workspace_id        uuid not null references public.workspaces (id) on delete cascade,
   title               text not null default '',
   description         text not null default '',
-  -- Тип date, а не timestamp: времени суток в приложении нет и не будет.
+  -- The date type, not timestamp: the app has no time of day and never will.
   start_date          date,
   due_date            date,
   done                boolean not null default false,
   remind_days_before  integer,
   position            double precision not null default 0,
-  -- Метки лежат прямо в задаче: пользователь один, join-таблица тут лишняя.
+  -- Labels live right inside the task: there is one user, a join table is redundant here.
   label_ids           jsonb not null default '[]'::jsonb,
-  -- Произвольные поля карточки: [{ "name": "...", "value": "..." }]
+  -- Custom fields of the card: [{ "name": "...", "value": "..." }]
   custom_fields       jsonb not null default '[]'::jsonb,
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now(),
@@ -63,7 +64,7 @@ create table if not exists public.notes (
   deleted       boolean not null default false
 );
 
--- Синхронизация тянет строки по `updated_at`, остальное — обычная выборка по воркспейсу.
+-- Sync pulls rows by `updated_at`, the rest is the ordinary lookup by workspace.
 create index if not exists labels_updated_idx on public.labels (user_id, updated_at);
 create index if not exists tasks_updated_idx  on public.tasks  (user_id, updated_at);
 create index if not exists notes_updated_idx  on public.notes  (user_id, updated_at);
@@ -71,8 +72,8 @@ create index if not exists workspaces_updated_idx on public.workspaces (user_id,
 create index if not exists tasks_workspace_idx on public.tasks (workspace_id, due_date);
 create index if not exists notes_workspace_idx on public.notes (workspace_id, parent_id);
 
--- Доступ только к своим строкам. Приложение ходит с анонимным ключом,
--- поэтому вся защита данных держится на этих политиках.
+-- Access to your own rows only. The app talks with the anon key,
+-- so all data protection rests on these policies.
 do $$
 declare
   t text;

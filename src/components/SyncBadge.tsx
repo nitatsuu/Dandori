@@ -10,8 +10,8 @@ const TITLES: Record<SyncState, string> = {
 }
 
 /**
- * Единственный индикатор состояния сети. Показывается только когда
- * что-то не в порядке или идёт обмен: в спокойном состоянии шапка чистая.
+ * The only network state indicator. It shows up only when something is wrong or
+ * an exchange is in progress: while everything is calm the header stays clean.
  */
 export function SyncBadge() {
   const [state, setState] = useState<SyncState>(getSyncState)

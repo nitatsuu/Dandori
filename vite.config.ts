@@ -25,10 +25,10 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Precache оболочки: всё, что собрал Vite.
+        // Precache the shell: everything Vite has built.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: '/index.html',
-        // Supabase не кэшируем: офлайн держится на IndexedDB, а не на HTTP-кэше.
+        // Supabase is not cached: offline rests on IndexedDB, not on the HTTP cache.
         navigateFallbackDenylist: [/supabase\.co/],
         runtimeCaching: [
           {
