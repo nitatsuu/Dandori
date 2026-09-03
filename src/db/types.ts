@@ -79,10 +79,3 @@ export interface Note extends Synced {
 /** Таблицы, участвующие в синхронизации. */
 export const SYNCED_TABLES = ['workspaces', 'labels', 'tasks', 'notes'] as const
 export type SyncedTable = (typeof SYNCED_TABLES)[number]
-
-export interface TableRowMap {
-  workspaces: Workspace
-  labels: Label
-  tasks: Task
-  notes: Note
-}

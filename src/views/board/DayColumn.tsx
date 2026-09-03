@@ -3,7 +3,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { dayLabel, isWeekend, relativeDayLabel, weekdayShort } from '../../db/dates'
 import type { ID, ISODate, Label, Task } from '../../db/types'
-import { columnId } from './model'
+import { columnId, columnKey } from './model'
 import { AddTaskField } from './AddTaskField'
 import { TaskCard } from './TaskCard'
 
@@ -52,7 +52,13 @@ export function DayColumn({ workspaceId, date, today, tasks, labels, onOpenTask 
       <div className="board__list">
         <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} labels={labels} onOpen={onOpenTask} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              labels={labels}
+              column={columnKey(date)}
+              onOpen={onOpenTask}
+            />
           ))}
         </SortableContext>
         {adding && (

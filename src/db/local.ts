@@ -26,11 +26,14 @@ export class DandoriDB extends Dexie {
 
   constructor() {
     super('dandori')
+    // Индексы ровно под те запросы, которые есть: выборка воркспейса,
+    // сбор грязных строк на отправку и чтение по id. Сортировка идёт в памяти —
+    // задач в воркспейсе сотни, а не миллионы.
     this.version(1).stores({
       workspaces: 'id, position, _dirty',
-      labels: 'id, workspace_id, position, _dirty',
-      tasks: 'id, workspace_id, due_date, [workspace_id+due_date], position, _dirty',
-      notes: 'id, workspace_id, parent_id, [workspace_id+parent_id], position, _dirty',
+      labels: 'id, workspace_id, _dirty',
+      tasks: 'id, workspace_id, _dirty',
+      notes: 'id, workspace_id, _dirty',
       meta: 'key',
     })
   }

@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { renderMarkdown } from '../lib/markdown'
+import { useMemo, useState } from 'react'
 import { createNote, deleteNote, updateNote } from '../db/api'
 import { useNotes } from '../db/hooks'
+import { emptyOf } from '../lib/empty'
+import { renderMarkdown } from '../lib/markdown'
+import { useAutosave } from '../lib/useAutosave'
+import { useEscape } from '../lib/useEscape'
 import type { ID, Note, NoteKind } from '../db/types'
 import './Notes.css'
 
@@ -9,10 +12,6 @@ export interface NotesProps {
   workspaceId: ID
 }
 
-/** Стабильная ссылка: пока база не ответила, список пустой. */
-const NO_NOTES: Note[] = []
-
-const SAVE_DELAY = 500
 const MENU_W = 168
 
 interface Row {
@@ -27,7 +26,7 @@ interface Menu {
 }
 
 export function Notes({ workspaceId }: NotesProps) {
-  const notes = useNotes(workspaceId) ?? NO_NOTES
+  const notes = useNotes(workspaceId) ?? emptyOf<Note>()
 
   const [selectedId, setSelectedId] = useState<ID | null>(null)
   // Раскрытие папок — состояние экрана, а не данные: в базу не пишется.
@@ -114,7 +113,6 @@ export function Notes({ workspaceId }: NotesProps) {
               aria-selected={note.id === selectedId}
               aria-expanded={note.kind === 'folder' ? expanded.has(note.id) : undefined}
               onClick={() => select(note)}
-              onDoubleClick={() => setRenamingId(note.id)}
               onContextMenu={(e) => {
                 e.preventDefault()
                 setMenu({ id: note.id, x: clampX(e.clientX), y: e.clientY })
@@ -228,7 +226,6 @@ function RenameInput({
       autoFocus
       onFocus={(e) => e.target.select()}
       onClick={(e) => e.stopPropagation()}
-      onDoubleClick={(e) => e.stopPropagation()}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={() => onCommit(draft)}
       onKeyDown={(e) => {
@@ -254,13 +251,7 @@ function RowMenu({
   onRename: () => void
   onRemove: () => void
 }) {
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  useEscape(onClose)
 
   return (
     <>
@@ -325,7 +316,7 @@ function NoteEditor({ note, onBack }: { note: Note; onBack: () => void }) {
       </div>
 
       {preview ? (
-        <div className="notes__markdown" dangerouslySetInnerHTML={{ __html: html }} />
+        <div className="md notes__markdown" dangerouslySetInnerHTML={{ __html: html }} />
       ) : (
         <textarea
           className="notes__textarea"
@@ -336,62 +327,4 @@ function NoteEditor({ note, onBack }: { note: Note; onBack: () => void }) {
       )}
     </>
   )
-}
-
-/**
- * Поле с отложенной записью в базу.
- *
- * Текст приезжает и снаружи — с другого устройства через синхронизацию, — поэтому
- * `synced` хранит значение, на котором поле и база сошлись. Пока пришедшее из базы
- * совпадает с ним, это эхо нашей же записи: трогать поле нельзя, иначе курсор
- * прыгнет в конец на каждом сохранении. Настоящая чужая правка подхватывается,
- * но только если своих неотправленных нет — перебивать то, что человек печатает
- * прямо сейчас, хуже, чем разойтись с сервером на пару секунд; дальше работает
- * общий для проекта last-write-wins по `updated_at`.
- */
-function useAutosave(remote: string, save: (value: string) => void) {
-  const [draft, setDraft] = useState(remote)
-  const synced = useRef(remote)
-  const pending = useRef<string | null>(null)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Ссылка на актуальный колбэк: сам flush остаётся стабильным.
-  const saveRef = useRef(save)
-  useEffect(() => {
-    saveRef.current = save
-  })
-
-  const flush = useCallback(() => {
-    if (timer.current !== null) {
-      clearTimeout(timer.current)
-      timer.current = null
-    }
-    const value = pending.current
-    if (value === null) return
-    pending.current = null
-    synced.current = value
-    saveRef.current(value)
-  }, [])
-
-  useEffect(() => {
-    if (remote === synced.current) return
-    synced.current = remote
-    if (pending.current !== null) return
-    setDraft(remote)
-  }, [remote])
-
-  // Недописанное не должно пропасть при переключении заметки.
-  useEffect(() => flush, [flush])
-
-  const change = useCallback(
-    (value: string) => {
-      setDraft(value)
-      pending.current = value
-      if (timer.current !== null) clearTimeout(timer.current)
-      timer.current = setTimeout(flush, SAVE_DELAY)
-    },
-    [flush],
-  )
-
-  return [draft, change] as const
 }

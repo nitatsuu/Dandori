@@ -6,22 +6,29 @@ import {
 } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { toggleTaskDone } from '../../db/api'
+import { dayLabel } from '../../db/dates'
+import { labelColors, labelVar } from '../../lib/labels'
 import type { ID, Label, Task } from '../../db/types'
-import { accent, cardClass, labelColors } from './model'
+import { accent, cardClass } from './model'
 
 interface Props {
   task: Task
   labels: Label[]
+  /** Ключ колонки, в которой нарисована карточка: по нему опознаётся цель дропа. */
+  column: string
   compact?: boolean
+  /** Дата на карточке нужна там, где её не видно по шапке колонки. */
+  showDate?: boolean
   onOpen: (id: ID) => void
 }
 
 /** Порог, ниже которого отпускание считается кликом, а не перетаскиванием. */
 const CLICK_SLOP = 5
 
-export function TaskCard({ task, labels, compact, onOpen }: Props) {
+export function TaskCard({ task, labels, column, compact, showDate, onOpen }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
+    data: { column },
   })
   const pressed = useRef<{ x: number; y: number } | null>(null)
 
@@ -53,13 +60,21 @@ export function TaskCard({ task, labels, compact, onOpen }: Props) {
       onPointerDown={onPointerDown}
       onClick={onClick}
     >
-      <CardBody task={task} labels={labels} />
+      <CardBody task={task} labels={labels} showDate={showDate} />
     </div>
   )
 }
 
 /** Тело карточки: то же самое рисуется под пальцем в DragOverlay. */
-export function CardBody({ task, labels }: { task: Task; labels: Label[] }) {
+export function CardBody({
+  task,
+  labels,
+  showDate,
+}: {
+  task: Task
+  labels: Label[]
+  showDate?: boolean
+}) {
   const colors = labelColors(task, labels)
 
   return (
@@ -78,10 +93,13 @@ export function CardBody({ task, labels }: { task: Task; labels: Label[] }) {
       />
       <span className="board__card-main">
         <span className="board__card-title">{task.title}</span>
+        {showDate && task.due_date && (
+          <span className="board__card-date">{dayLabel(task.due_date)}</span>
+        )}
         {colors.length > 0 && (
           <span className="board__dots">
             {colors.map((color, i) => (
-              <i key={i} className="board__dot" style={{ background: `var(--label-${color})` }} />
+              <i key={i} className="board__dot" style={{ background: labelVar(color) }} />
             ))}
           </span>
         )}

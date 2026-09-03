@@ -5,6 +5,11 @@ import type { ID, Label, Note, Task, Workspace } from './types'
 /*
  * Реактивное чтение из локальной базы.
  * Любая запись — своя или приехавшая с сервера — сама перерисует интерфейс.
+ *
+ * У хуков одной записи три состояния: `undefined` — база ещё не ответила,
+ * `null` — записи нет или её удалили, объект — запись есть. Слить первые два
+ * нельзя: тогда не отличить загрузку от удаления на другом устройстве,
+ * и открытый диалог не узнает, что пора закрываться.
  */
 
 export function useWorkspaces(): Workspace[] | undefined {
@@ -14,11 +19,11 @@ export function useWorkspaces(): Workspace[] | undefined {
   }, [])
 }
 
-export function useWorkspace(id: ID | null): Workspace | undefined {
+export function useWorkspace(id: ID | null): Workspace | null | undefined {
   return useLiveQuery(async () => {
-    if (!id) return undefined
+    if (!id) return null
     const row = await db.workspaces.get(id)
-    return row && !row.deleted ? row : undefined
+    return row && !row.deleted ? row : null
   }, [id])
 }
 
@@ -38,11 +43,11 @@ export function useTasks(workspaceId: ID | null): Task[] | undefined {
   }, [workspaceId])
 }
 
-export function useTask(id: ID | null): Task | undefined {
+export function useTask(id: ID | null): Task | null | undefined {
   return useLiveQuery(async () => {
-    if (!id) return undefined
+    if (!id) return null
     const row = await db.tasks.get(id)
-    return row && !row.deleted ? row : undefined
+    return row && !row.deleted ? row : null
   }, [id])
 }
 
@@ -54,10 +59,10 @@ export function useNotes(workspaceId: ID | null): Note[] | undefined {
   }, [workspaceId])
 }
 
-export function useNote(id: ID | null): Note | undefined {
+export function useNote(id: ID | null): Note | null | undefined {
   return useLiveQuery(async () => {
-    if (!id) return undefined
+    if (!id) return null
     const row = await db.notes.get(id)
-    return row && !row.deleted ? row : undefined
+    return row && !row.deleted ? row : null
   }, [id])
 }

@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
-import type { ISODate, Label, LabelColor, Task } from '../../db/types'
+import { labelColors, labelVar } from '../../lib/labels'
+import type { ISODate, Label, Task } from '../../db/types'
 
 /*
  * Общее для всех режимов доски: колонка — это день.
@@ -9,16 +10,24 @@ import type { ISODate, Label, LabelColor, Task } from '../../db/types'
 
 export const NO_DATE = 'nodate'
 
-const COLUMN_PREFIX = 'col:'
+/**
+ * Закреплённая колонка с просроченным. Своей даты у неё нет:
+ * задачи лежат каждая со своей, поэтому дропы в неё не принимаются.
+ */
+export const OVERDUE = 'overdue'
 
-export const NO_TASKS: Task[] = []
+const COLUMN_PREFIX = 'col:'
 
 export function columnKey(date: ISODate | null): string {
   return date ?? NO_DATE
 }
 
+export function columnIdOf(key: string): string {
+  return COLUMN_PREFIX + key
+}
+
 export function columnId(date: ISODate | null): string {
-  return COLUMN_PREFIX + columnKey(date)
+  return columnIdOf(columnKey(date))
 }
 
 /** Ключ колонки из идентификатора droppable, либо `null`, если это не колонка. */
@@ -42,10 +51,29 @@ export function groupByDay(tasks: Task[]): Map<string, Task[]> {
   return groups
 }
 
-export function labelColors(task: Task, labels: Label[]): LabelColor[] {
-  return task.label_ids.flatMap((id) => {
-    const label = labels.find((l) => l.id === id)
-    return label ? [label.color] : []
+export function isOverdue(task: Task, today: ISODate): boolean {
+  return !task.done && task.due_date !== null && task.due_date < today
+}
+
+/** Просроченное, кроме дней, которые и так показаны колонками: там задача уже видна. */
+export function collectOverdue(
+  groups: Map<string, Task[]>,
+  today: ISODate,
+  shown: ISODate[],
+): Task[] {
+  const visible = new Set(shown)
+  const out: Task[] = []
+
+  for (const [key, list] of groups) {
+    if (key === NO_DATE || key >= today || visible.has(key)) continue
+    for (const task of list) if (!task.done) out.push(task)
+  }
+
+  return out.sort((a, b) => {
+    const x = a.due_date ?? ''
+    const y = b.due_date ?? ''
+    if (x !== y) return x < y ? -1 : 1
+    return a.position - b.position
   })
 }
 
@@ -67,5 +95,5 @@ export function cardClass(
 /** Цвет первой метки уходит в полоску слева, а на телефоне красит всю карточку. */
 export function accent(task: Task, labels: Label[]): CSSProperties {
   const first = labelColors(task, labels)[0]
-  return { '--card-accent': first ? `var(--label-${first})` : 'var(--border)' } as CSSProperties
+  return { '--card-accent': first ? labelVar(first) : 'var(--border)' } as CSSProperties
 }

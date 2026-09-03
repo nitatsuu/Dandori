@@ -10,6 +10,7 @@ import {
 } from '../db/dates'
 import { useToday } from '../state/useToday'
 import type { ID, ISODate, Label, Task } from '../db/types'
+import { labelVar, taskLabels } from '../lib/labels'
 import './Timeline.css'
 
 export interface TimelineProps {
@@ -21,7 +22,9 @@ export interface TimelineProps {
 
 /** Запас по краям, чтобы крайние полоски не упирались в границу шкалы. */
 const PAD_DAYS = 3
-/** Опечатка в годе («0202») не должна разворачивать шкалу на десятки тысяч колонок. */
+/** Короткая шкала выглядит обрезанной: показываем минимум месяц вперёд от сегодня. */
+const MIN_SPAN_DAYS = 30
+/** Страховка от даты-выброса: шкала не разворачивается на десятки тысяч колонок. */
 const MAX_SPAN_DAYS = 1830
 const MIN_DAY_W = 6
 const MIN_DAY_W_COMPACT = 20
@@ -216,7 +219,6 @@ function TimelineRow({
 // ------------------------------------------------------------------- подсчёты
 
 function buildRows(tasks: Task[], labels: Label[], now: ISODate): Row[] {
-  const byId = new Map(labels.map((l) => [l.id, l]))
   const rows: Row[] = []
 
   for (const task of tasks) {
@@ -225,14 +227,14 @@ function buildRows(tasks: Task[], labels: Label[], now: ISODate): Row[] {
     const single = s ?? d
     if (!single) continue
 
-    const label = task.label_ids.map((id) => byId.get(id)).find(Boolean)
+    const [label] = taskLabels(task, labels)
     // Дедлайн раньше начала карточка не запрещает: рисуем по фактическим краям.
     rows.push({
       task,
       from: s && d ? (s < d ? s : d) : single,
       to: s && d ? (s < d ? d : s) : single,
       milestone: !s || !d,
-      color: label ? `var(--label-${label.color})` : NEUTRAL,
+      color: label ? labelVar(label.color) : NEUTRAL,
       overdue: d !== null && !task.done && d < now,
     })
   }
@@ -246,7 +248,10 @@ function buildRows(tasks: Task[], labels: Label[], now: ISODate): Row[] {
   return rows
 }
 
-/** Диапазон шкалы: от самой ранней даты до самой поздней, сегодня всегда внутри. */
+/**
+ * Диапазон шкалы: от самой ранней даты до самой поздней, сегодня всегда внутри
+ * и правый край не ближе месяца от него.
+ */
 function buildScale(rows: Row[], now: ISODate): ISODate[] {
   let min = now
   let max = now
@@ -257,6 +262,10 @@ function buildScale(rows: Row[], now: ISODate): ISODate[] {
 
   let start = addDays(min, -PAD_DAYS)
   let end = addDays(max, PAD_DAYS)
+
+  const month = addDays(now, MIN_SPAN_DAYS)
+  if (end < month) end = month
+
   if (diffDays(start, end) > MAX_SPAN_DAYS) {
     const anchor = addDays(now, -Math.floor(MAX_SPAN_DAYS / 2))
     if (anchor > start) start = anchor

@@ -1,7 +1,6 @@
 import { db, type Local } from './local'
 import { requestPush } from '../sync/sync'
 import type {
-  CustomField,
   ID,
   ISODate,
   Label,
@@ -61,16 +60,6 @@ export async function renameWorkspace(id: ID, name: string): Promise<void> {
   const row = await db.workspaces.get(id)
   if (!row) return
   await db.workspaces.put(touch({ ...row, name: name.trim() || row.name }))
-  queue()
-}
-
-export async function reorderWorkspaces(orderedIds: ID[]): Promise<void> {
-  await db.transaction('rw', db.workspaces, async () => {
-    for (const [i, id] of orderedIds.entries()) {
-      const row = await db.workspaces.get(id)
-      if (row) await db.workspaces.put(touch({ ...row, position: (i + 1) * POS_STEP }))
-    }
-  })
   queue()
 }
 
@@ -263,10 +252,6 @@ export async function moveTask(id: ID, due: ISODate | null, beforeId: ID | null)
     }
   })
   queue()
-}
-
-export async function setTaskCustomFields(id: ID, fields: CustomField[]): Promise<void> {
-  await updateTask(id, { custom_fields: fields })
 }
 
 // ------------------------------------------------------------------- заметки

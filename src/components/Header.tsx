@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createWorkspace, deleteWorkspace, exportAll, renameWorkspace } from '../db/api'
 import type { ID, Label, Workspace } from '../db/types'
 import { signOut } from '../auth/useSession'
@@ -81,7 +81,8 @@ function WorkspaceMenu({
   onSelect: (id: ID) => void
 }) {
   const [open, setOpen] = useState(false)
-  const ref = useOutsideClick<HTMLDivElement>(() => setOpen(false))
+  const close = useCallback(() => setOpen(false), [])
+  const ref = useOutsideClick<HTMLDivElement>(close)
 
   async function add() {
     const name = prompt('Название воркспейса')
@@ -135,7 +136,8 @@ function SettingsMenu({
   canDelete: boolean
 }) {
   const [open, setOpen] = useState(false)
-  const ref = useOutsideClick<HTMLDivElement>(() => setOpen(false))
+  const close = useCallback(() => setOpen(false), [])
+  const ref = useOutsideClick<HTMLDivElement>(close)
 
   async function rename() {
     if (!current) return
@@ -162,7 +164,8 @@ function SettingsMenu({
     a.href = url
     a.download = `dandori-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
-    URL.revokeObjectURL(url)
+    // Синхронный отзыв успевает отменить скачивание в части браузеров.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
     setOpen(false)
   }
 
@@ -209,13 +212,20 @@ function SettingsMenu({
 function useOutsideClick<T extends HTMLElement>(onOutside: () => void) {
   const ref = useRef<T>(null)
 
+  // Колбэк приходит новой стрелкой на каждый рендер: держим его в ref,
+  // иначе слушатель переподписывается постоянно.
+  const cb = useRef(onOutside)
+  useEffect(() => {
+    cb.current = onOutside
+  })
+
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onOutside()
+      if (ref.current && !ref.current.contains(e.target as Node)) cb.current()
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [onOutside])
+  }, [])
 
   return ref
 }

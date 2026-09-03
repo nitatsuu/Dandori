@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState, type Ref } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import {
   closestCorners,
   DndContext,
@@ -12,6 +12,7 @@ import {
 } from '@dnd-kit/core'
 import { moveTask } from '../db/api'
 import { addDays, dateRange } from '../db/dates'
+import { emptyOf } from '../lib/empty'
 import { useToday } from '../state/useToday'
 import type { ID, ISODate, Label, Task } from '../db/types'
 import { BOARD_MODES, BOARD_MODE_TITLES, type BoardMode } from '../state/ui'
@@ -21,13 +22,15 @@ import { CardBody } from './board/TaskCard'
 import {
   accent,
   cardClass,
+  collectOverdue,
   columnKey,
   dateFromKey,
   groupByDay,
   keyFromColumnId,
   NO_DATE,
-  NO_TASKS,
+  OVERDUE,
 } from './board/model'
+import { OverdueColumn } from './board/OverdueColumn'
 import './Board.css'
 
 export interface BoardProps {
@@ -40,12 +43,23 @@ export interface BoardProps {
   onOpenTask: (id: ID) => void
 }
 
-/** Скользящее окно режима «14 дней». */
-const WINDOW_DAYS = 14
+/*
+ * Скользящее окно режима «14 дней»: вчера, сегодня и 13 дней вперёд.
+ * Один день назад нужен, чтобы вчерашний дедлайн не исчезал с доски в полночь.
+ */
+const WINDOW_BACK = 1
+const WINDOW_FORWARD = 13
 
 export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask }: BoardProps) {
   const now = useToday()
   const groups = useMemo(() => groupByDay(tasks), [tasks])
+
+  const days = useMemo(
+    () => dateRange(addDays(now, -WINDOW_BACK), addDays(now, WINDOW_FORWARD)),
+    [now],
+  )
+  // Просроченное, до которого в окне не доскроллить. Колонки нет, пока нечего показывать.
+  const overdue = useMemo(() => collectOverdue(groups, now, days), [groups, now, days])
   const [dragged, setDragged] = useState<ID | null>(null)
 
   const sensors = useSensors(
@@ -63,15 +77,18 @@ export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask 
     if (!task) return
 
     const overId = String(over.id)
-    const overColumn = keyFromColumnId(overId)
-    const key = overColumn ?? columnKey(tasks.find((t) => t.id === overId)?.due_date ?? null)
-    if (!overColumn && !tasks.some((t) => t.id === overId)) return
+    // Отпустили либо на колонке, либо на карточке — у карточки колонка лежит в data.
+    const onColumn = keyFromColumnId(overId)
+    const key = onColumn ?? (over.data.current?.column as string | undefined) ?? null
+    if (key === null) return
+    // В «Просрочено» класть нечего: своей даты у колонки нет.
+    if (key === OVERDUE) return
 
-    const column = groups.get(key) ?? NO_TASKS
+    const column = groups.get(key) ?? emptyOf<Task>()
     const rest = column.filter((t) => t.id !== id)
 
     let index: number
-    if (overColumn !== null) {
+    if (onColumn !== null) {
       // Отпустили на пустом месте колонки — задача встаёт в конец.
       index = rest.length
     } else {
@@ -84,7 +101,7 @@ export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask 
     }
 
     // Карточку вернули на прежнее место: лишняя запись только зря разбудит синхронизацию.
-    const before = groups.get(columnKey(task.due_date)) ?? NO_TASKS
+    const before = groups.get(columnKey(task.due_date)) ?? emptyOf<Task>()
     if (before === column && before[index]?.id === id) return
 
     // Место задаётся соседом: при активном фильтре номер в видимом списке
@@ -135,7 +152,8 @@ export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask 
           />
         ) : (
           <Strip
-            days={dateRange(now, addDays(now, WINDOW_DAYS - 1))}
+            days={days}
+            overdue={overdue}
             workspaceId={workspaceId}
             today={now}
             groups={groups}
@@ -171,6 +189,7 @@ interface StripProps {
 
 function Strip({
   days,
+  overdue,
   scroller,
   onScroll,
   workspaceId,
@@ -180,18 +199,31 @@ function Strip({
   onOpenTask,
 }: StripProps & {
   days: ISODate[]
-  scroller?: Ref<HTMLDivElement>
+  /** Только в режиме «14 дней»: в ленте до прошлого можно доскроллить. */
+  overdue?: Task[]
+  scroller?: RefObject<HTMLDivElement | null>
   onScroll?: () => void
 }) {
+  const own = useRef<HTMLDivElement>(null)
+  const el = scroller ?? own
   const columns: (ISODate | null)[] = [null, ...days]
 
+  // Открываемся на сегодня: слева стоят «Без даты» и, возможно, «Просрочено»,
+  // и без этого на телефоне доска встречала бы пустой колонкой без даты.
+  useLayoutEffect(() => {
+    scrollToDay(el.current, today)
+  }, [el, today])
+
   return (
-    <div className="board__scroller" ref={scroller} onScroll={onScroll}>
+    <div className="board__scroller" ref={el} onScroll={onScroll}>
+      {overdue && overdue.length > 0 && (
+        <OverdueColumn tasks={overdue} labels={labels} onOpenTask={onOpenTask} />
+      )}
       {columns.map((date) => (
         <DayColumn
           key={date ?? NO_DATE}
           date={date}
-          tasks={groups.get(columnKey(date)) ?? NO_TASKS}
+          tasks={groups.get(columnKey(date)) ?? emptyOf<Task>()}
           workspaceId={workspaceId}
           today={today}
           labels={labels}
@@ -200,6 +232,24 @@ function Strip({
       ))}
     </div>
   )
+}
+
+/**
+ * Ставит день к левому краю видимой части. Закреплённые колонки перекрывают
+ * начало полосы, поэтому их суммарная ширина вычитается; на телефоне
+ * закреплённых нет и вычитать нечего.
+ */
+function scrollToDay(el: HTMLDivElement | null, day: ISODate): void {
+  if (!el) return
+  const node = el.querySelector<HTMLElement>(`[data-day="${day}"]`)
+  if (!node) return
+
+  let pinned = 0
+  for (const child of el.children) {
+    if (getComputedStyle(child).position !== 'sticky') break
+    pinned += (child as HTMLElement).offsetWidth
+  }
+  el.scrollLeft = node.offsetLeft - pinned
 }
 
 // --------------------------------------------------------------------- лента
@@ -220,14 +270,6 @@ function Ribbon(props: StripProps) {
   )
   // День, за который держимся, пока окно дней меняется под руками.
   const anchor = useRef<{ day: ISODate; left: number; scrollLeft: number } | null>(null)
-
-  useLayoutEffect(() => {
-    const el = scroller.current
-    if (!el) return
-    const node = el.querySelector<HTMLElement>(`[data-day="${start}"]`)
-    const pinned = el.firstElementChild as HTMLElement | null
-    if (node) el.scrollLeft = node.offsetLeft - (pinned?.offsetWidth ?? 0)
-  }, [start])
 
   // Окно сдвинулось — возвращаем полосу туда, где её оставил пользователь.
   useLayoutEffect(() => {

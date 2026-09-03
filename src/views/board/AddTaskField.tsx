@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createTask } from '../../db/api'
+import { useEscape } from '../../lib/useEscape'
 import type { ID, ISODate } from '../../db/types'
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
 /** Инлайн-создание задачи прямо в колонке: Enter — создать, Escape — закрыть. */
 export function AddTaskField({ workspaceId, date, onClose }: Props) {
   const [title, setTitle] = useState('')
+  useEscape(onClose)
 
   async function submit() {
     const value = title.trim()
@@ -33,7 +35,6 @@ export function AddTaskField({ workspaceId, date, onClose }: Props) {
       onChange={(e) => setTitle(e.target.value)}
       onKeyDown={(e) => {
         if (e.key === 'Enter') void submit()
-        if (e.key === 'Escape') onClose()
       }}
       onBlur={() => {
         if (!title.trim()) onClose()

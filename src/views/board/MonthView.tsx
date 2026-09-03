@@ -11,7 +11,8 @@ import {
   weekdayShort,
 } from '../../db/dates'
 import type { ID, ISODate, Label, Task } from '../../db/types'
-import { columnId, NO_TASKS } from './model'
+import { emptyOf } from '../../lib/empty'
+import { columnId } from './model'
 import { AddTaskField } from './AddTaskField'
 import { TaskCard } from './TaskCard'
 
@@ -66,7 +67,7 @@ export function MonthView({ workspaceId, today, groups, labels, onOpenTask }: Pr
             date={date}
             today={today}
             outside={!isSameMonth(date, anchor)}
-            tasks={groups.get(date) ?? NO_TASKS}
+            tasks={groups.get(date) ?? emptyOf<Task>()}
             labels={labels}
             onOpenTask={onOpenTask}
           />
@@ -118,7 +119,14 @@ function MonthCell({
       <div className="board__cell-list">
         <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} labels={labels} compact onOpen={onOpenTask} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              labels={labels}
+              column={date}
+              compact
+              onOpen={onOpenTask}
+            />
           ))}
         </SortableContext>
         {adding && (

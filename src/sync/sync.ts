@@ -15,6 +15,7 @@ import { SYNCED_TABLES, type SyncedTable } from '../db/types'
  */
 
 const LAST_PULL = 'last_pull_at'
+const EPOCH = '1970-01-01T00:00:00.000Z'
 const PUSH_DEBOUNCE_MS = 400
 const POLL_INTERVAL_MS = 60_000
 
@@ -47,21 +48,27 @@ function stripLocal<T extends object>(row: Local<T>): T {
   return rest as unknown as T
 }
 
+/**
+ * Метки времени приходят в разных форматах: локальные пишутся как `…Z`,
+ * PostgREST отдаёт `…+00:00`. Сравнивать их как строки нельзя.
+ */
+function isNewerOrSame(a: string, b: string): boolean {
+  return Date.parse(a) >= Date.parse(b)
+}
+
 // ---------------------------------------------------------------- отправка
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null
 let pushInFlight: Promise<void> | null = null
 let pushAgain = false
 
-/** Просьба отправить изменения. Вызовы схлопываются. */
-export function requestPush(): Promise<void> {
+/** Просьба отправить изменения. Вызовы схлопываются в один отложенный пуш. */
+export function requestPush(): void {
   if (pushTimer) clearTimeout(pushTimer)
-  return new Promise((resolve) => {
-    pushTimer = setTimeout(() => {
-      pushTimer = null
-      resolve(push())
-    }, PUSH_DEBOUNCE_MS)
-  })
+  pushTimer = setTimeout(() => {
+    pushTimer = null
+    void push()
+  }, PUSH_DEBOUNCE_MS)
 }
 
 export async function push(): Promise<void> {
@@ -77,8 +84,10 @@ export async function push(): Promise<void> {
       return
     }
 
-    const { data: auth } = await supabase.auth.getUser()
-    const userId = auth.user?.id
+    // Именно getSession: он читает сохранённую сессию локально,
+    // а getUser ходил бы в сеть перед каждым апсертом.
+    const { data: auth } = await supabase.auth.getSession()
+    const userId = auth.session?.user.id
     if (!userId) return
 
     setState('syncing')
@@ -122,13 +131,28 @@ export async function push(): Promise<void> {
 
 // ------------------------------------------------------------------ загрузка
 
-export async function pull(): Promise<void> {
+let pullInFlight: Promise<void> | null = null
+
+/**
+ * Забирает всё, что изменилось на сервере с прошлого раза.
+ * На чистом устройстве курсора нет, поэтому первая загрузка выгребает всё.
+ */
+export function pull(): Promise<void> {
+  // Интервал, возвращение из фона и появление сети могут выстрелить разом.
+  // Без этого три загрузки наперегонки перепишут друг другу курсор.
+  pullInFlight ??= runPull().finally(() => {
+    pullInFlight = null
+  })
+  return pullInFlight
+}
+
+async function runPull(): Promise<void> {
   if (!navigator.onLine) {
     setState('offline')
     return
   }
 
-  const since = (await getMeta(LAST_PULL)) ?? '1970-01-01T00:00:00.000Z'
+  const since = (await getMeta(LAST_PULL)) ?? EPOCH
   // Запас в минуту прикрывает расхождение часов между устройствами.
   const startedAt = new Date(Date.now() - 60_000).toISOString()
 
@@ -157,7 +181,9 @@ async function mergeRows(table: SyncedTable, rows: Record<string, unknown>[]): P
       const local = await db[table].get(id)
 
       // Локальная правка новее удалённой — её и оставляем, она уедет при отправке.
-      if (local?._dirty === 1 && local.updated_at >= (clean.updated_at as string)) continue
+      if (local?._dirty === 1 && isNewerOrSame(local.updated_at, clean.updated_at as string)) {
+        continue
+      }
 
       await db[table].put({ ...clean, _dirty: 0 } as never)
     }
@@ -166,38 +192,48 @@ async function mergeRows(table: SyncedTable, rows: Record<string, unknown>[]): P
 
 // ------------------------------------------------------------------- запуск
 
-let stopped = true
-
-/** Первая полная загрузка после входа: локальная база ещё пустая. */
-export async function initialPull(): Promise<void> {
-  await setMeta(LAST_PULL, '1970-01-01T00:00:00.000Z')
-  await pull()
+export interface SyncHandle {
+  /** Резолвится, когда первый обмен с сервером завершён — успехом или нет. */
+  ready: Promise<void>
+  stop: () => void
 }
 
-export function startSync(): () => void {
-  stopped = false
+/**
+ * Запускает обмен и держит его: интервал, появление сети, возвращение из фона.
+ * Состояние живёт в замыкании, а не в модуле, — иначе клинап одного вызова
+ * глушил бы тики следующего, и после перемонтирования синхронизация умирала бы.
+ */
+export function startSync(): SyncHandle {
+  let stopped = false
 
-  const tick = () => {
+  const cycle = async () => {
     if (stopped) return
-    void push().then(() => pull())
+    await push()
+    if (stopped) return
+    await pull()
   }
 
+  const tick = () => void cycle()
+
   const onOnline = () => tick()
+  const onOffline = () => setState('offline')
   const onVisible = () => {
     if (document.visibilityState === 'visible') tick()
   }
 
   window.addEventListener('online', onOnline)
-  window.addEventListener('offline', () => setState('offline'))
+  window.addEventListener('offline', onOffline)
   document.addEventListener('visibilitychange', onVisible)
   const timer = setInterval(tick, POLL_INTERVAL_MS)
 
-  tick()
-
-  return () => {
-    stopped = true
-    clearInterval(timer)
-    window.removeEventListener('online', onOnline)
-    document.removeEventListener('visibilitychange', onVisible)
+  return {
+    ready: cycle(),
+    stop: () => {
+      stopped = true
+      clearInterval(timer)
+      window.removeEventListener('online', onOnline)
+      window.removeEventListener('offline', onOffline)
+      document.removeEventListener('visibilitychange', onVisible)
+    },
   }
 }

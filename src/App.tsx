@@ -10,21 +10,15 @@ import { Notes } from './views/Notes'
 import { useSession } from './auth/useSession'
 import { createWorkspace } from './db/api'
 import { useLabels, useTasks, useWorkspaces } from './db/hooks'
-import { initialPull, startSync } from './sync/sync'
-import { useBoardMode, useCurrentWorkspace, useTab, useTheme } from './state/ui'
+import { startSync } from './sync/sync'
+import { emptyOf } from './lib/empty'
+import { useBoardMode, useCurrentWorkspace, useTab, useTheme, type Theme } from './state/ui'
 import type { ID, Label, Task } from './db/types'
 import './App.css'
-
-// Стабильные ссылки: иначе useMemo ниже пересчитывается на каждом рендере.
-const NO_TASKS: Task[] = []
-const NO_LABELS: Label[] = []
 
 export function App() {
   const { session, loading } = useSession()
   const [theme, setTheme] = useTheme()
-
-  // Тема применяется и на экране входа, поэтому хук стоит выше проверки сессии.
-  void theme
 
   if (loading) return null
   if (!session) return <SignIn />
@@ -32,13 +26,7 @@ export function App() {
   return <Shell theme={theme} onSetTheme={setTheme} />
 }
 
-function Shell({
-  theme,
-  onSetTheme,
-}: {
-  theme: ReturnType<typeof useTheme>[0]
-  onSetTheme: ReturnType<typeof useTheme>[1]
-}) {
+function Shell({ theme, onSetTheme }: { theme: Theme; onSetTheme: (t: Theme) => void }) {
   const workspaces = useWorkspaces()
   const ids = useMemo(() => workspaces?.map((w) => w.id), [workspaces])
   const [workspaceId, selectWorkspace] = useCurrentWorkspace(ids)
@@ -46,8 +34,8 @@ function Shell({
   const [tab, setTab] = useTab()
   const [boardMode, setBoardMode] = useBoardMode()
 
-  const labels = useLabels(workspaceId) ?? NO_LABELS
-  const allTasks = useTasks(workspaceId) ?? NO_TASKS
+  const labels = useLabels(workspaceId) ?? emptyOf<Label>()
+  const allTasks = useTasks(workspaceId) ?? emptyOf<Task>()
 
   const [activeLabels, setActiveLabels] = useState<ID[]>([])
   const [openTaskId, setOpenTaskId] = useState<ID | null>(null)
@@ -128,28 +116,34 @@ function Shell({
 }
 
 /**
- * Первый запуск: сначала полная загрузка с сервера, и только если данных
- * действительно нет — заводим стартовые воркспейсы. Иначе на втором устройстве
- * появились бы дубликаты.
+ * Запуск синхронизации и стартовые воркспейсы.
+ *
+ * Заводить их можно только после первого обмена с сервером: локальная база
+ * отвечает пустым списком мгновенно, и без ожидания второе устройство завело бы
+ * себе вторую пару «Работа»/«Университет».
  */
 function useBootstrap(workspaces: ReturnType<typeof useWorkspaces>) {
-  const done = useRef(false)
+  const [pulled, setPulled] = useState(false)
+  const seeded = useRef(false)
 
   useEffect(() => {
-    let stop: (() => void) | undefined
-    void (async () => {
-      await initialPull()
-      stop = startSync()
-    })()
-    return () => stop?.()
+    const sync = startSync()
+    let alive = true
+    void sync.ready.then(() => {
+      if (alive) setPulled(true)
+    })
+    return () => {
+      alive = false
+      sync.stop()
+    }
   }, [])
 
   useEffect(() => {
-    if (done.current || !workspaces || workspaces.length > 0) return
-    done.current = true
+    if (!pulled || seeded.current || !workspaces || workspaces.length > 0) return
+    seeded.current = true
     void (async () => {
       await createWorkspace('Работа')
       await createWorkspace('Университет')
     })()
-  }, [workspaces])
+  }, [pulled, workspaces])
 }

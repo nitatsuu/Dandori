@@ -64,14 +64,38 @@
   background: var(--bg-sunken);
 }
 
-/* «Без даты» не уезжает при горизонтальном скролле, поэтому фон непрозрачный. */
-.board__col--nodate {
+/*
+ * Закреплённые колонки не уезжают при горизонтальном скролле,
+ * поэтому фон у них непрозрачный. «Просрочено» стоит вплотную к дням,
+ * то есть сразу за «Без даты».
+ */
+.board__col--nodate,
+.board__col--overdue {
   position: sticky;
-  left: 0;
   z-index: 2;
   flex-basis: var(--nodate-w);
   background: var(--bg);
   border-right: 1px solid var(--border-strong);
+}
+
+.board__col--nodate {
+  left: 0;
+}
+
+.board__col--overdue {
+  left: var(--nodate-w);
+  background: var(--overdue-bg);
+}
+
+.board__col-date--overdue {
+  color: var(--danger);
+}
+
+/* Дата на карточке просроченного: по шапке колонки её не понять. */
+.board__card-date {
+  color: var(--danger);
+  font-size: var(--fz-xs);
+  white-space: nowrap;
 }
 
 .board__col--over {
@@ -349,13 +373,17 @@
 /* Телефон */
 
 @media (max-width: 720px) {
-  /* Закреплённая колонка и один день ровно на ширину экрана. */
-  .board {
-    --nodate-w: calc(100vw - var(--day-col-w-mobile));
-  }
-
+  /*
+   * На узком экране не закрепляем ничего. Закреплённых колонок теперь две,
+   * а закреплённая область плюс один день уже занимают весь экран —
+   * вторая туда не влезает. «Без даты» и «Просрочено» становятся обычными
+   * первыми колонками ленты: стартовый скролл стоит на сегодня,
+   * свайп вправо возвращает к ним.
+   */
   .board__scroller {
     scroll-snap-type: x proximity;
+    /* Закреплённых колонок здесь нет, прятать под них нечего. */
+    scroll-padding-left: 0;
   }
 
   .board__col {
@@ -363,9 +391,11 @@
     scroll-snap-align: start;
   }
 
-  .board__col--nodate {
-    flex-basis: var(--nodate-w);
-    scroll-snap-align: none;
+  .board__col--nodate,
+  .board__col--overdue {
+    position: static;
+    flex-basis: var(--day-col-w-mobile);
+    scroll-snap-align: start;
   }
 
   .board__month-nav {
