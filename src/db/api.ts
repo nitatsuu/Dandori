@@ -232,11 +232,15 @@ export async function deleteTask(id: ID): Promise<void> {
 }
 
 /**
- * Перенос задачи в колонку дня на конкретное место.
- * `due` = null — колонка «Без даты». Позиции колонки пересчитываются целиком:
- * задач в дне единицы, экономить тут не на чем.
+ * Перенос задачи в колонку дня перед задачей `beforeId`; `null` — в конец колонки.
+ * `due` = null — колонка «Без даты».
+ *
+ * Место задаётся соседом, а не номером: на доске может стоять фильтр по меткам,
+ * и номер в отфильтрованном списке не совпадает с номером в колонке целиком.
+ *
+ * Позиции колонки пересчитываются целиком: задач в дне единицы, экономить не на чем.
  */
-export async function moveTask(id: ID, due: ISODate | null, index: number): Promise<void> {
+export async function moveTask(id: ID, due: ISODate | null, beforeId: ID | null): Promise<void> {
   await db.transaction('rw', db.tasks, async () => {
     const moved = await db.tasks.get(id)
     if (!moved) return
@@ -245,7 +249,8 @@ export async function moveTask(id: ID, due: ISODate | null, index: number): Prom
       .filter((t) => !t.deleted && t.due_date === due && t.id !== id)
       .sort((a, b) => a.position - b.position)
 
-    const at = Math.max(0, Math.min(index, column.length))
+    const found = beforeId ? column.findIndex((t) => t.id === beforeId) : -1
+    const at = found >= 0 ? found : column.length
     column.splice(at, 0, { ...moved, due_date: due })
 
     for (const [i, task] of column.entries()) {

@@ -1,0 +1,407 @@
+.board {
+  --nodate-w: var(--day-col-w);
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.board__bar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.board__modes {
+  display: flex;
+  gap: var(--sp-1);
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+.board__mode {
+  height: 22px;
+  padding: 0 var(--sp-4);
+  border-radius: calc(var(--radius) - 1px);
+  color: var(--text-dim);
+  font-size: var(--fz-sm);
+}
+
+.board__mode--on {
+  background: var(--bg-raised);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: var(--shadow-card);
+}
+
+/* Дни */
+
+.board__scroller {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-padding-left: var(--nodate-w);
+}
+
+.board__col {
+  display: flex;
+  flex: 0 0 var(--day-col-w);
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--border);
+}
+
+.board__col--weekend {
+  background: var(--bg-sunken);
+}
+
+/* «Без даты» не уезжает при горизонтальном скролле, поэтому фон непрозрачный. */
+.board__col--nodate {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  flex-basis: var(--nodate-w);
+  background: var(--bg);
+  border-right: 1px solid var(--border-strong);
+}
+
+.board__col--over {
+  background: var(--accent-bg);
+}
+
+.board__col-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-3) var(--sp-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.board__col--today .board__col-head {
+  border-bottom-color: var(--today);
+  box-shadow: inset 0 2px 0 var(--today);
+}
+
+.board__col-date {
+  font-size: var(--fz-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.board__col--today .board__col-date {
+  color: var(--today);
+}
+
+.board__col--weekend .board__col-date {
+  color: var(--text-dim);
+}
+
+.board__col-wd {
+  color: var(--text-faint);
+  font-size: var(--fz-xs);
+  text-transform: uppercase;
+}
+
+.board__col-rel {
+  color: var(--today);
+  font-size: var(--fz-xs);
+}
+
+.board__add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: auto;
+  border-radius: var(--radius);
+  color: var(--text-faint);
+  font-size: var(--fz-lg);
+  line-height: 1;
+}
+
+.board__add:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.board__list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-height: 0;
+  padding: var(--sp-2);
+  overflow-y: auto;
+}
+
+.board__new {
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fz-sm);
+}
+
+/* Карточка */
+
+.board__card {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--card-accent);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-card);
+  font-size: var(--fz-sm);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.board__card:hover {
+  border-color: var(--border-strong);
+  border-left-color: var(--card-accent);
+}
+
+.board__card--done {
+  opacity: 0.5;
+}
+
+.board__card--done .board__card-title {
+  text-decoration: line-through;
+}
+
+.board__card--dragging {
+  opacity: 0.3;
+}
+
+.board__card--overlay {
+  cursor: grabbing;
+  box-shadow: var(--shadow-pop);
+}
+
+.board__check {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.board__card-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.board__card-title {
+  overflow-wrap: anywhere;
+}
+
+.board__dots {
+  display: flex;
+  gap: 3px;
+}
+
+.board__dot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+/* Месяц */
+
+.board__month {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.board__month-nav {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.board__month-title {
+  min-width: 8em;
+  font-size: var(--fz-lg);
+  font-weight: 600;
+}
+
+.board__weekdays {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--border);
+}
+
+.board__weekday {
+  padding: var(--sp-1) var(--sp-3);
+  color: var(--text-faint);
+  font-size: var(--fz-xs);
+  text-transform: uppercase;
+}
+
+.board__grid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-rows: minmax(96px, 1fr);
+  min-height: 0;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+}
+
+.board__cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.board__cell--weekend {
+  background: var(--bg-sunken);
+}
+
+.board__cell--outside .board__cell-num {
+  color: var(--text-faint);
+}
+
+.board__cell--outside .board__cell-list {
+  opacity: 0.65;
+}
+
+.board__cell--over {
+  background: var(--accent-bg);
+}
+
+.board__cell-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+}
+
+.board__cell-num {
+  font-size: var(--fz-sm);
+  font-weight: 600;
+}
+
+.board__cell--today .board__cell-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--today);
+  color: var(--accent-text);
+}
+
+.board__cell-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  padding: 0 var(--sp-1) var(--sp-1);
+  overflow-y: auto;
+}
+
+.board__card--compact {
+  gap: var(--sp-2);
+  padding: 1px var(--sp-2);
+  font-size: var(--fz-xs);
+  box-shadow: none;
+}
+
+.board__card--compact .board__check {
+  width: 11px;
+  height: 11px;
+  margin-top: 1px;
+}
+
+.board__card--compact .board__dot {
+  width: 5px;
+  height: 5px;
+}
+
+/* Телефон */
+
+@media (max-width: 720px) {
+  /* Закреплённая колонка и один день ровно на ширину экрана. */
+  .board {
+    --nodate-w: calc(100vw - var(--day-col-w-mobile));
+  }
+
+  .board__scroller {
+    scroll-snap-type: x proximity;
+  }
+
+  .board__col {
+    flex-basis: var(--day-col-w-mobile);
+    scroll-snap-align: start;
+  }
+
+  .board__col--nodate {
+    flex-basis: var(--nodate-w);
+    scroll-snap-align: none;
+  }
+
+  .board__month-nav {
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .board__weekday {
+    padding: var(--sp-1);
+    text-align: center;
+  }
+
+  .board__grid {
+    grid-auto-rows: minmax(72px, 1fr);
+  }
+
+  .board__cell-head {
+    justify-content: center;
+    padding: var(--sp-1) 0;
+  }
+
+  /* В ячейку месяца влезает только полоска цвета метки. */
+  .board__cell .board__add {
+    display: none;
+  }
+
+  .board__card--compact {
+    flex-basis: 6px;
+    height: 6px;
+    padding: 0;
+    border: none;
+    border-radius: 3px;
+    background: var(--card-accent);
+  }
+
+  .board__card--compact .board__check,
+  .board__card--compact .board__card-main {
+    display: none;
+  }
+}

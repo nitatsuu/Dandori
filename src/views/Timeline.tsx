@@ -7,8 +7,8 @@ import {
   isWeekend,
   monthLabel,
   startOfWeek,
-  today,
 } from '../db/dates'
+import { useToday } from '../state/useToday'
 import type { ID, ISODate, Label, Task } from '../db/types'
 import './Timeline.css'
 
@@ -66,7 +66,7 @@ interface Month {
 
 /** Все задачи с датами на одной шкале: где начинается, где дедлайн, где просрочено. */
 export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
-  const now = today()
+  const now = useToday()
   const rootRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)

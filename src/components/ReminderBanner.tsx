@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { diffDays, pluralDays, today } from '../db/dates'
+import { diffDays, pluralDays } from '../db/dates'
+import { useToday } from '../state/useToday'
 import type { ID, Task } from '../db/types'
 import './ReminderBanner.css'
 
@@ -20,7 +21,7 @@ interface Entry {
 }
 
 export function ReminderBanner({ tasks, onOpenTask, onDismiss }: Props) {
-  const now = today()
+  const now = useToday()
 
   const { overdue, dueToday, soon } = useMemo(() => {
     const overdue: Entry[] = []
