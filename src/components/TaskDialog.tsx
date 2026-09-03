@@ -36,6 +36,18 @@ export function TaskDialog({ taskId, workspaceId, labels, onClose }: Props) {
 
   const patch = (p: Parameters<typeof updateTask>[1]) => void updateTask(task.id, p)
 
+  /*
+   * Поле `type=date` шлёт onChange на каждый набранный символ. Пока человек
+   * печатает год, браузер успевает отдать промежуточное «0202-03-01», и такая
+   * дата уезжает в базу и в таймлайн. Записываем только правдоподобные даты.
+   */
+  const patchDate = (key: 'start_date' | 'due_date', raw: string) => {
+    if (raw === '') return patch({ [key]: null })
+    const year = Number(raw.slice(0, 4))
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw) || year < 1970 || year > 2999) return
+    patch({ [key]: raw })
+  }
+
   async function remove() {
     if (!task) return
     if (!confirm(`Удалить задачу «${task.title}»?`)) return
@@ -72,16 +84,20 @@ export function TaskDialog({ taskId, workspaceId, labels, onClose }: Props) {
             <input
               className="field"
               type="date"
+              min="1970-01-01"
+              max="2999-12-31"
               value={task.start_date ?? ''}
-              onChange={(e) => patch({ start_date: e.target.value || null })}
+              onChange={(e) => patchDate('start_date', e.target.value)}
             />
           </Field>
           <Field label="Дедлайн">
             <input
               className="field"
               type="date"
+              min="1970-01-01"
+              max="2999-12-31"
               value={task.due_date ?? ''}
-              onChange={(e) => patch({ due_date: e.target.value || null })}
+              onChange={(e) => patchDate('due_date', e.target.value)}
             />
           </Field>
           <Field label="Напомнить">

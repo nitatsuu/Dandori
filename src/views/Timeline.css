@@ -1,0 +1,196 @@
+/*
+ * Шкала — сетка из колонок-дней. Ширину дня считает JS и кладёт в --tl-day-w,
+ * здесь она только раздаётся полоскам, заголовкам и линии «сегодня».
+ */
+
+.timeline {
+  --tl-row-h: 26px;
+  height: 100%;
+  overflow: hidden;
+}
+
+.timeline__scroll {
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior-x: contain;
+}
+
+.timeline__grid {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  width: calc(var(--tl-name-w) + var(--tl-track-w));
+}
+
+/* Шапка: месяцы и числа */
+
+.timeline__head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.timeline__corner {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  flex: 0 0 var(--tl-name-w);
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+}
+
+.timeline__head-track {
+  flex: 0 0 var(--tl-track-w);
+}
+
+.timeline__months,
+.timeline__days {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--tl-day-w);
+}
+
+.timeline__month {
+  overflow: hidden;
+  padding: var(--sp-1) var(--sp-3);
+  border-left: 1px solid var(--border-strong);
+  color: var(--text-dim);
+  font-size: var(--fz-xs);
+  white-space: nowrap;
+}
+
+.timeline__day {
+  height: 17px;
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: var(--fz-xs);
+  line-height: 17px;
+  text-align: center;
+}
+
+.timeline__day--weekend {
+  background: var(--bg-sunken);
+}
+
+.timeline__day--week {
+  border-left: 1px solid var(--border);
+}
+
+.timeline__day--month {
+  border-left: 1px solid var(--border-strong);
+}
+
+.timeline__day--today {
+  color: var(--today);
+  font-weight: 600;
+}
+
+/* Строки задач */
+
+.timeline__rows {
+  position: relative;
+  flex: 1;
+  /* Вертикальные засечки по понедельникам: тайл шириной в неделю. */
+  background-image: linear-gradient(to right, var(--border) 0 1px, transparent 1px);
+  background-size: calc(var(--tl-day-w) * 7) 100%;
+  background-position: calc(var(--tl-name-w) + var(--tl-day-w) * var(--tl-week-offset)) 0;
+}
+
+.timeline__today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--today);
+  pointer-events: none;
+}
+
+.timeline__row {
+  display: flex;
+  height: var(--tl-row-h);
+  cursor: pointer;
+}
+
+.timeline__name {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  flex: 0 0 var(--tl-name-w);
+  overflow: hidden;
+  padding: 0 var(--sp-4);
+  border-right: 1px solid var(--border);
+  background: var(--bg);
+  font-size: var(--fz-sm);
+  line-height: var(--tl-row-h);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.timeline__track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--tl-day-w);
+  align-items: center;
+  flex: 0 0 var(--tl-track-w);
+}
+
+.timeline__bar {
+  height: 12px;
+  min-width: 3px;
+  border-radius: 999px;
+  background: var(--tl-color);
+}
+
+.timeline__dot {
+  justify-self: center;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--tl-color);
+}
+
+.timeline__row--done {
+  opacity: 0.55;
+}
+
+.timeline__row--done .timeline__name {
+  color: var(--text-dim);
+  text-decoration: line-through;
+}
+
+.timeline__row--overdue {
+  background: var(--overdue-bg);
+}
+
+.timeline__row--overdue .timeline__name {
+  background: var(--overdue-bg);
+  color: var(--danger);
+}
+
+.timeline__row--overdue .timeline__bar,
+.timeline__row--overdue .timeline__dot {
+  box-shadow: 0 0 0 1.5px var(--danger);
+}
+
+.timeline__row:hover {
+  background: var(--bg-hover);
+}
+
+.timeline__row:hover .timeline__name {
+  background: var(--bg-hover);
+}
+
+@media (max-width: 720px) {
+  .timeline {
+    --tl-row-h: 32px;
+  }
+
+  .timeline__name {
+    padding: 0 var(--sp-3);
+  }
+}
