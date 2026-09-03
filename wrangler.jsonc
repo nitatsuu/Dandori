@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dandori",
+  "compatibility_date": "2026-09-04",
+
+  // Приложение целиком статическое: скриптов на воркере нет, отдаётся собранный dist.
+  "assets": {
+    "directory": "./dist",
+    // Одна страница на все адреса: маршрутизация живёт в браузере.
+    "not_found_handling": "single-page-application"
+  }
+}
