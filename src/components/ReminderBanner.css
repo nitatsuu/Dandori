@@ -1,0 +1,76 @@
+.reminders {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-raised);
+}
+
+.reminders__list {
+  display: flex;
+  flex: 1;
+  gap: var(--sp-3);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.reminders__list::-webkit-scrollbar {
+  display: none;
+}
+
+.reminders__chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  flex: 0 0 auto;
+  max-width: 320px;
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: var(--fz-sm);
+}
+
+.reminders__chip:hover {
+  background: var(--bg-hover);
+}
+
+.reminders__chip--overdue {
+  border-color: var(--danger);
+  background: var(--overdue-bg);
+}
+
+.reminders__chip--today {
+  border-color: var(--accent);
+}
+
+.reminders__chip-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reminders__chip-note {
+  flex: 0 0 auto;
+  color: var(--text-dim);
+  font-size: var(--fz-xs);
+}
+
+.reminders__chip--overdue .reminders__chip-note {
+  color: var(--danger);
+}
+
+.reminders__close {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius);
+  color: var(--text-faint);
+  font-size: var(--fz-sm);
+}
+
+.reminders__close:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}

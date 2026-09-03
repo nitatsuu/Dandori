@@ -1,0 +1,25 @@
+.tabbar {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .tabbar {
+    display: flex;
+    flex: 0 0 auto;
+    height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    border-top: 1px solid var(--border);
+    background: var(--bg-raised);
+  }
+
+  .tabbar__item {
+    flex: 1;
+    color: var(--text-dim);
+    font-size: var(--fz-sm);
+  }
+
+  .tabbar__item--on {
+    color: var(--accent);
+    font-weight: 600;
+  }
+}

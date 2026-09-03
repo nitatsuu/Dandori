@@ -1,0 +1,65 @@
+.lfilter {
+  position: relative;
+}
+
+.lfilter__btn {
+  color: var(--text-dim);
+}
+
+.lfilter__btn--on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.lfilter__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+
+.lfilter__pop {
+  position: absolute;
+  top: calc(100% + var(--sp-2));
+  right: 0;
+  z-index: 40;
+  min-width: 180px;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-pop);
+}
+
+.lfilter__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius);
+  font-size: var(--fz-md);
+  text-align: left;
+}
+
+.lfilter__row:hover {
+  background: var(--bg-hover);
+}
+
+.lfilter__row--on {
+  background: var(--accent-bg);
+}
+
+.lfilter__dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.lfilter__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

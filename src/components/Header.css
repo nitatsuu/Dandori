@@ -1,0 +1,150 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  height: var(--header-h);
+  padding: 0 var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-raised);
+}
+
+.header__ws {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  max-width: 190px;
+  height: 28px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--radius);
+  font-size: var(--fz-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.header__ws:hover {
+  background: var(--bg-hover);
+}
+
+.header__ws-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header__caret {
+  color: var(--text-faint);
+  font-size: var(--fz-xs);
+}
+
+.header__tabs {
+  display: flex;
+  gap: var(--sp-1);
+  padding: var(--sp-1);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+}
+
+.header__tab {
+  height: 24px;
+  padding: 0 var(--sp-5);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-size: var(--fz-sm);
+}
+
+.header__tab:hover {
+  color: var(--text);
+}
+
+.header__tab--on {
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-card);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.header__right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-left: auto;
+}
+
+.header__gear {
+  width: 28px;
+  height: 28px;
+  justify-content: center;
+  color: var(--text-dim);
+}
+
+/* Выпадающие меню */
+
+.menu {
+  position: relative;
+}
+
+.menu__pop {
+  position: absolute;
+  top: calc(100% + var(--sp-2));
+  left: 0;
+  z-index: 40;
+  min-width: 200px;
+  padding: var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-pop);
+}
+
+.menu__pop--right {
+  left: auto;
+  right: 0;
+}
+
+.menu__item {
+  display: block;
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius);
+  font-size: var(--fz-md);
+  text-align: left;
+}
+
+.menu__item:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.menu__item:disabled {
+  color: var(--text-faint);
+  cursor: default;
+}
+
+.menu__item--on {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.menu__item--danger {
+  color: var(--danger);
+}
+
+.menu__label {
+  padding: var(--sp-3) var(--sp-4) var(--sp-2);
+  color: var(--text-faint);
+  font-size: var(--fz-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.menu__sep {
+  height: 1px;
+  margin: var(--sp-2) 0;
+  background: var(--border);
+}
+
+/* Телефон: вкладки уезжают вниз отдельной панелью */
+@media (max-width: 720px) {
+  .header__tabs {
+    display: none;
+  }
+}
