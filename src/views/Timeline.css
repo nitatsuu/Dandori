@@ -308,7 +308,10 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  z-index: 1;
+  /* A lead reaches its own level and crosses every level under it, so the marks
+     nearest the axis have to paint last. Without this the outermost callout drew
+     a line straight through the text of the ones below it. */
+  z-index: calc(var(--tl-lv-n) - var(--tl-lv));
   width: 0;
   pointer-events: none;
 }
@@ -352,6 +355,11 @@
 .timeline__callout {
   position: absolute;
   height: var(--tl-lv-h);
+  /* Opaque, so a lead passing this level is cut off by the text rather than
+     drawn across it. */
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--bg);
   overflow: hidden;
   color: var(--text-dim);
   font-size: var(--fz-xs);
@@ -374,6 +382,11 @@
     var(--tl-axis-t) + var(--tl-tick) + var(--tl-months-h) + var(--tl-gap) + var(--tl-lv) *
       var(--tl-lv-h)
   );
+}
+
+/* The mark under the pointer comes forward whatever level it sits on. */
+.timeline__mark:hover {
+  z-index: calc(var(--tl-lv-n) + 1);
 }
 
 .timeline__mark:hover .timeline__callout {
