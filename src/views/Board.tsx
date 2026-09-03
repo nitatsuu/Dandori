@@ -8,13 +8,15 @@ import {
   type RefObject,
 } from 'react'
 import {
-  closestCorners,
   DndContext,
   DragOverlay,
   MouseSensor,
   TouchSensor,
+  pointerWithin,
+  rectIntersection,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
@@ -58,6 +60,47 @@ export interface BoardProps {
  */
 const WINDOW_BACK = 1
 const WINDOW_FORWARD = 13
+
+/*
+ * The drop goes where the pointer is, not where the card happens to overlap.
+ * Comparing rectangles put a card's own column ahead of the one under the
+ * cursor — a day column is as tall as the board, so it never looked close —
+ * and near the left edge the pinned «Без даты» column won instead and quietly
+ * cleared the date. Rectangles are still the fallback for the gap between two
+ * columns, where the pointer is inside nothing at all.
+ */
+/*
+ * The drop goes to whatever is actually under the pointer, read from the page
+ * itself. Comparing rectangles put a card's own column ahead of the one under
+ * the cursor — a day column is as tall as the board, so it never looked close —
+ * and the pinned columns made it worse: they float over the strip, and the
+ * rectangle dnd-kit keeps for them slides away with the scroll while the column
+ * stays put, so a card dropped on «Без даты» landed on the day hidden behind it.
+ * The page knows what is on top; rectangles are only the fallback for the gaps
+ * between columns, where the pointer is inside nothing at all.
+ */
+const collide: CollisionDetection = (args) => {
+  const { pointerCoordinates, droppableContainers } = args
+
+  if (pointerCoordinates) {
+    const nodes = new Map<Element, (typeof droppableContainers)[number]>()
+    for (const container of droppableContainers) {
+      const node = container.node.current
+      if (node) nodes.set(node, container)
+    }
+
+    // The whole stack, nearest first: the card under the pointer wins over the
+    // column holding it. The card flying under the cursor is in the stack too and
+    // is simply not a drop target, so it is passed over.
+    for (const node of document.elementsFromPoint(pointerCoordinates.x, pointerCoordinates.y)) {
+      const container = nodes.get(node)
+      if (container) return [{ id: container.id, data: { droppableContainer: container } }]
+    }
+  }
+
+  const under = pointerWithin(args)
+  return under.length > 0 ? under : rectIntersection(args)
+}
 
 export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask }: BoardProps) {
   const now = useToday()
@@ -150,7 +193,7 @@ export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask 
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={collide}
         onDragStart={(e: DragStartEvent) => setDragged(String(e.active.id))}
         onDragCancel={() => setDragged(null)}
         onDragEnd={onDragEnd}
