@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Dandori">
+  <rect width="512" height="512" rx="112" fill="#16181d"/>
+  <g fill="#31363f">
+    <rect x="84" y="104" width="88" height="304" rx="24"/>
+    <rect x="212" y="104" width="88" height="304" rx="24"/>
+    <rect x="340" y="104" width="88" height="304" rx="24"/>
+  </g>
+  <rect x="84" y="104" width="88" height="120" rx="24" fill="#3d8bfd"/>
+</svg>
