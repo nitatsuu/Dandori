@@ -3,7 +3,11 @@
 
 -- All tables are built the same way:
 --   user_id     — the owner, checked by the RLS policies;
---   updated_at  — for conflict resolution during sync;
+--   updated_at  — the time of the edit, set by the device: it decides conflicts;
+--   synced_at   — the time the server saw the row, set here by a trigger: the pull
+--                 cursor runs on it, because an edit made offline keeps an
+--                 `updated_at` older than the cursor of a device that has been
+--                 online all along and would never be asked for again;
 --   deleted     — soft delete, otherwise a deletion made on an offline device
 --                 never arrives anywhere.
 
@@ -81,11 +85,35 @@ begin
   end if;
 end $$;
 
--- Sync pulls rows by `updated_at`, the rest is the ordinary lookup by workspace.
-create index if not exists labels_updated_idx on public.labels (user_id, updated_at);
-create index if not exists tasks_updated_idx  on public.tasks  (user_id, updated_at);
-create index if not exists notes_updated_idx  on public.notes  (user_id, updated_at);
-create index if not exists workspaces_updated_idx on public.workspaces (user_id, updated_at);
+-- `synced_at` is the server's own stamp: every write sets it, so the pull cursor
+-- can order rows by the moment the server saw them.
+create or replace function public.touch_synced_at() returns trigger
+language plpgsql
+as $$
+begin
+  new.synced_at = now();
+  return new;
+end;
+$$;
+
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['workspaces', 'labels', 'tasks', 'notes'] loop
+    execute format(
+      'alter table public.%I add column if not exists synced_at timestamptz not null default now()', t);
+    execute format('drop trigger if exists %I on public.%I', t || '_synced_at', t);
+    execute format(
+      'create trigger %I before insert or update on public.%I
+         for each row execute function public.touch_synced_at()',
+      t || '_synced_at', t);
+    execute format(
+      'create index if not exists %I on public.%I (user_id, synced_at)', t || '_synced_at_idx', t);
+  end loop;
+end $$;
+
+-- The rest is the ordinary lookup by workspace.
 create index if not exists tasks_workspace_idx on public.tasks (workspace_id, due_date);
 create index if not exists notes_workspace_idx on public.notes (workspace_id, parent_id);
 

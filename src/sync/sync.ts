@@ -15,8 +15,17 @@ import { SYNCED_TABLES, type SyncedTable } from '../db/types'
  * is rare enough that a CRDT is not worth it.
  */
 
-const LAST_PULL = 'last_pull_at'
+/** Pull cursor, one per table. See `runPull` for why it is not one for all of them. */
+const cursorKey = (table: SyncedTable) => `synced_at:${table}`
 const EPOCH = '1970-01-01T00:00:00.000Z'
+/*
+ * How far the cursor is held back from the newest row already taken. A write
+ * that was in flight while the query ran gets a stamp from the moment it
+ * started, which can be older than rows the query did return, and the next pull
+ * would step right over it. Rows arriving twice cost nothing, a row lost costs
+ * everything.
+ */
+const CURSOR_SLACK_MS = 5_000
 const PUSH_DEBOUNCE_MS = 400
 const POLL_INTERVAL_MS = 60_000
 
@@ -164,19 +173,34 @@ async function runPull(): Promise<void> {
     return
   }
 
-  const since = (await getMeta(LAST_PULL)) ?? EPOCH
-  // A minute of slack covers clock skew between devices.
-  const startedAt = new Date(Date.now() - 60_000).toISOString()
-
   setState('syncing')
   try {
+    /*
+     * The cursor runs on `synced_at`, the stamp the server puts on a row as it
+     * writes it — never on `updated_at`, which belongs to the device that made
+     * the edit. An edit made offline keeps the time it was made: edit on the
+     * phone at 10:00, come back online at 11:00, and a laptop whose cursor moved
+     * to 10:05 long ago would never ask for anything that old again, so the edit
+     * would sit on the server invisible to it for good.
+     *
+     * One cursor per table, taken from the rows that table actually returned.
+     * A single shared cursor could be dragged forward by a busy table past rows
+     * of a quiet one that were written while the pull was already running.
+     */
     for (const table of SYNCED_TABLES) {
-      const { data, error } = await supabase.from(table).select('*').gt('updated_at', since)
+      const since = (await getMeta(cursorKey(table))) ?? EPOCH
+      const { data, error } = await supabase.from(table).select('*').gt('synced_at', since)
       if (error) throw error
       if (!data || data.length === 0) continue
-      await mergeRows(table, data as Record<string, unknown>[])
+
+      const rows = data as Record<string, unknown>[]
+      await mergeRows(table, rows)
+
+      let newest = 0
+      for (const row of rows) newest = Math.max(newest, Date.parse(row.synced_at as string))
+      const next = new Date(newest - CURSOR_SLACK_MS).toISOString()
+      if (Date.parse(next) > Date.parse(since)) await setMeta(cursorKey(table), next)
     }
-    await setMeta(LAST_PULL, startedAt)
     setState('idle')
   } catch (err) {
     setState(navigator.onLine ? 'error' : 'offline')
@@ -187,8 +211,9 @@ async function runPull(): Promise<void> {
 async function mergeRows(table: SyncedTable, rows: Record<string, unknown>[]): Promise<void> {
   await db.transaction('rw', db[table], async () => {
     for (const remote of rows) {
-      // `user_id` is only needed by the server; locally it is dead weight.
-      const { user_id: _user, ...clean } = remote
+      // Both belong to the server alone: the owner it checks, and the stamp it
+      // puts on a row as it writes it. Locally they are dead weight.
+      const { user_id: _user, synced_at: _synced, ...clean } = remote
       const id = clean.id as string
       const local = await db[table].get(id)
 
