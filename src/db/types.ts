@@ -91,5 +91,10 @@ export interface Note extends Synced {
 }
 
 /** Tables that take part in sync. */
-export const SYNCED_TABLES = ['workspaces', 'labels', 'tasks', 'notes'] as const
+/*
+ * Sync order, and it matters: a row is pushed after everything it points at.
+ * Tasks come last because a task can carry a note, and the server rejects the
+ * whole batch with a foreign key error when that note has not landed yet.
+ */
+export const SYNCED_TABLES = ['workspaces', 'labels', 'notes', 'tasks'] as const
 export type SyncedTable = (typeof SYNCED_TABLES)[number]

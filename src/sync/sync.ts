@@ -92,8 +92,17 @@ export async function push(): Promise<void> {
     if (!userId) return
 
     setState('syncing')
-    try {
-      for (const table of SYNCED_TABLES) {
+    let failed = false
+
+    /*
+     * A table that will not go through must not take the others with it. The
+     * tables are ordered so that a row is sent after everything it points at,
+     * but if one batch is rejected anyway, giving up on the rest would leave the
+     * queue stuck for good: the row that would settle the conflict is often in
+     * the very table that never gets its turn.
+     */
+    for (const table of SYNCED_TABLES) {
+      try {
         const dirty = await db[table].where('_dirty').equals(1).toArray()
         if (dirty.length === 0) continue
 
@@ -110,12 +119,13 @@ export async function push(): Promise<void> {
             }
           }
         })
+      } catch (err) {
+        failed = true
+        console.error(`[sync] push failed: ${table}`, err)
       }
-      setState('idle')
-    } catch (err) {
-      setState(navigator.onLine ? 'error' : 'offline')
-      console.error('[sync] push failed', err)
     }
+
+    setState(failed ? (navigator.onLine ? 'error' : 'offline') : 'idle')
   })()
 
   try {
