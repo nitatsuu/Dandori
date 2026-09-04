@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { TIMELINE_ZOOMS, TIMELINE_ZOOM_TITLES, type TimelineZoom } from '../../state/ui'
 import type { ID, ISODate } from '../../db/types'
 import { clamp, midOf, rangeLabel, type Row, type Scale } from './model'
 
@@ -49,10 +50,12 @@ export interface AxisProps {
   /** Callout levels available on each side of the axis; the height follows it. */
   levels: number
   today: ISODate
+  zoom: TimelineZoom
+  onZoom: (zoom: TimelineZoom) => void
   onOpen: (id: ID) => void
 }
 
-export function Axis({ rows, scale, levels, today, onOpen }: AxisProps) {
+export function Axis({ rows, scale, levels, today, zoom, onZoom, onOpen }: AxisProps) {
   const marks = useMemo(() => place(rows, levels, scale), [rows, levels, scale])
   /*
    * Ticks are sparse. With a day step only the week starts get one, otherwise
@@ -71,7 +74,19 @@ export function Axis({ rows, scale, levels, today, onOpen }: AxisProps) {
 
   return (
     <div className="timeline__axis" style={{ '--tl-lv-n': levels } as React.CSSProperties}>
-      <div className="timeline__axis-cap" />
+      <div className="timeline__axis-cap">
+        <div className="timeline__zoom">
+          {TIMELINE_ZOOMS.map((z) => (
+            <button
+              key={z}
+              className={`timeline__zoom-btn${z === zoom ? ' timeline__zoom-btn--on' : ''}`}
+              onClick={() => onZoom(z)}
+            >
+              {TIMELINE_ZOOM_TITLES[z]}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="timeline__axis-track">
         <div className="timeline__axis-line" />
 

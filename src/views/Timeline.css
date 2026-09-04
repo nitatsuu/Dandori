@@ -231,13 +231,45 @@
 
 /* Under the name column: hides whatever scrolls behind it. */
 /*
- * Spacer that keeps the axis in step with the tracks of the rows above. It is
- * not pinned and paints nothing: the names it used to stand in for are in the
- * rows, which the axis never reaches, so pinning it only left a blank white
- * block in the corner and took a fifth of the width away from the axis on a phone.
+ * The corner of the axis: a spacer that keeps the axis in step with the tracks
+ * of the rows above, and the one place on the tab with room to spare. The range
+ * switch lives in it. Pinned, so the switch does not scroll off with the scale.
  */
 .timeline__axis-cap {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
   flex: 0 0 var(--tl-name-w);
+  padding: 0 var(--sp-3);
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+}
+
+.timeline__zoom {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+.timeline__zoom-btn {
+  height: 22px;
+  padding: 0 var(--sp-4);
+  border-radius: calc(var(--radius) - 1px);
+  color: var(--text-dim);
+  font-size: var(--fz-sm);
+}
+
+.timeline__zoom-btn--on {
+  background: var(--bg-raised);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: var(--shadow-card);
 }
 
 .timeline__axis-track {

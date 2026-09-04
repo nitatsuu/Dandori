@@ -11,6 +11,7 @@ const KEYS = {
   tab: 'dandori.tab',
   theme: 'dandori.theme',
   boardMode: 'dandori.boardMode',
+  timelineZoom: 'dandori.timelineZoom',
 } as const
 
 function read(key: string): string | null {
@@ -74,6 +75,20 @@ export const BOARD_MODE_TITLES: Record<BoardMode, string> = {
 
 export function useBoardMode() {
   return usePersisted<BoardMode>(KEYS.boardMode, 'days', BOARD_MODES)
+}
+
+// ------------------------------------------------------------- timeline zoom
+
+export const TIMELINE_ZOOMS = ['all', 'month'] as const
+export type TimelineZoom = (typeof TIMELINE_ZOOMS)[number]
+
+export const TIMELINE_ZOOM_TITLES: Record<TimelineZoom, string> = {
+  all: 'Всё',
+  month: 'Месяц',
+}
+
+export function useTimelineZoom() {
+  return usePersisted<TimelineZoom>(KEYS.timelineZoom, 'all', TIMELINE_ZOOMS)
 }
 
 // --------------------------------------------------------------------- theme

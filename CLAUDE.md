@@ -88,6 +88,12 @@ One schema for all workspaces. No per-workspace schemas.
 - The main scenario: see all deadlines on one scale and understand where the jam is.
 - The scale is never shorter than a month from today: with a couple of tasks it would
   otherwise take a third of the screen and look cut off.
+- Two range modes, switched in the empty bottom-left corner of the axis:
+  `Всё` — the whole span at once, and `Месяц` — a month across the screen, the rest
+  reached by scrolling. A cluster of deadlines a few days apart cannot be read on a
+  scale that spans a year, and dropping the far tasks to make room would lose the
+  overview the tab exists for; the switch keeps both. Nothing is hidden in either
+  mode, only the zoom differs. The choice is remembered per device.
 - A column is a day only while days are wide enough to read. Past that the step
   grows to a week and then to a month, so a grant two years out still fits on the
   screen instead of squeezing every day into a hairline. Dates keep their exact

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { addDays, dayLabel, diffDays, monthNameNominative } from '../db/dates'
 import { useToday } from '../state/useToday'
+import { useTimelineZoom } from '../state/ui'
 import type { ID, ISODate, Label, Task } from '../db/types'
 import { Axis } from './timeline/Axis'
 import {
@@ -68,24 +69,30 @@ export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
 
   const rows = useMemo(() => buildRows(tasks, labels, now), [tasks, labels, now])
   const span = useMemo(() => spanOf(rows, now), [rows, now])
+  const [zoom, setZoom] = useTimelineZoom()
 
   const compact = width > 0 && width < COMPACT_W
   const nameW = compact ? NAME_W_COMPACT : NAME_W
   const free = Math.max(240, width - nameW - GUTTER)
   const scale = useMemo(
-    () => buildScale(span.from, span.to, free, free * (compact ? SCREENS_COMPACT : SCREENS)),
-    [span, free, compact],
+    () => buildScale(span.from, span.to, free, free * (compact ? SCREENS_COMPACT : SCREENS), zoom),
+    [span, free, compact, zoom],
   )
 
-  // On a phone the scale is wider than the screen — open around today.
-  const scrolled = useRef(false)
+  /*
+   * A scale wider than the screen opens around today — and comes back to it when
+   * the range is switched, which is the one moment the old scroll position means
+   * nothing. Data changing under a scale the user has scrolled away from does not
+   * count: that would yank the view out from under them.
+   */
+  const centred = useRef<string | null>(null)
   useEffect(() => {
     const el = scrollRef.current
-    if (!el || scrolled.current || width === 0) return
+    if (!el || width === 0 || centred.current === zoom) return
+    centred.current = zoom
     if (el.scrollWidth <= el.clientWidth) return
-    scrolled.current = true
     el.scrollLeft = nameW + midOf(scale, now) - el.clientWidth / 2
-  }, [width, nameW, scale, now])
+  }, [width, zoom, nameW, scale, now])
 
   const vars = {
     '--tl-name-w': `${nameW}px`,
@@ -139,6 +146,8 @@ export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
             scale={scale}
             levels={compact ? AXIS_LEVELS_COMPACT : AXIS_LEVELS}
             today={now}
+            zoom={zoom}
+            onZoom={setZoom}
             onOpen={onOpenTask}
           />
         </div>

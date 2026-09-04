@@ -101,6 +101,9 @@ const STEPS: Step[] = [
   { unit: 'month', min: 46, max: 200 },
 ]
 
+/** Days «Месяц» puts across the screen. The rest of the scale is reached by scrolling. */
+const ZOOM_DAYS = 31
+
 export interface Cell {
   /** First date of the column. */
   date: ISODate
@@ -143,21 +146,40 @@ export interface Scale {
  *
  * `budget` is how wide the track may grow before the step has to coarsen: a
  * laptop asks the scale to fit, a phone tolerates a few screens of scrolling.
+ *
+ * «Месяц» ignores all that and keeps days at a size where a month fills the
+ * screen: a cluster of deadlines a few days apart is unreadable on a scale that
+ * spans a year, and dropping the far tasks to make room would lose the very
+ * overview the tab is for. Nothing is hidden — the scale just runs off the edge.
  */
-export function buildScale(from: ISODate, to: ISODate, free: number, budget: number): Scale {
-  let step = STEPS[STEPS.length - 1]
+export function buildScale(
+  from: ISODate,
+  to: ISODate,
+  free: number,
+  budget: number,
+  zoom: 'all' | 'month',
+): Scale {
+  let step = STEPS[0]
   let cells = cellsOf(step.unit, from, to)
 
-  for (const candidate of STEPS) {
-    const laid = cellsOf(candidate.unit, from, to)
-    if (laid.length * candidate.min <= budget) {
-      step = candidate
-      cells = laid
-      break
+  if (zoom === 'all') {
+    step = STEPS[STEPS.length - 1]
+    cells = cellsOf(step.unit, from, to)
+
+    for (const candidate of STEPS) {
+      const laid = cellsOf(candidate.unit, from, to)
+      if (laid.length * candidate.min <= budget) {
+        step = candidate
+        cells = laid
+        break
+      }
     }
   }
 
-  const cellW = clamp(free / cells.length, step.min, step.max)
+  const cellW =
+    zoom === 'month'
+      ? clamp(free / ZOOM_DAYS, step.min, step.max)
+      : clamp(free / cells.length, step.min, step.max)
   const first = cells[0].date
   const days = cells.reduce((n, c) => n + c.days, 0)
 
