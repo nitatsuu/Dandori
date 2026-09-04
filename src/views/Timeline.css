@@ -158,14 +158,6 @@
   transform: translateY(-50%);
 }
 
-.timeline__row--done {
-  opacity: 0.55;
-}
-
-.timeline__row--done .timeline__name {
-  color: var(--text-dim);
-  text-decoration: line-through;
-}
 
 .timeline__row--overdue {
   background: var(--overdue-bg);
@@ -441,14 +433,6 @@
   background: var(--text-faint);
 }
 
-.timeline__mark--done .timeline__point {
-  opacity: 0.45;
-}
-
-.timeline__mark--done .timeline__callout {
-  color: var(--text-faint);
-  text-decoration: line-through;
-}
 
 .timeline__mark--overdue .timeline__point {
   background: var(--danger);

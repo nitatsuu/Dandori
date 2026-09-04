@@ -172,7 +172,6 @@ function TimelineRow({
   const range = rangeLabel(row)
 
   const classes = ['timeline__row']
-  if (task.done) classes.push('timeline__row--done')
   if (row.overdue) classes.push('timeline__row--overdue')
 
   // The bar covers whole days, so it reaches to the far edge of the last one.

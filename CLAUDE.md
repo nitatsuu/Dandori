@@ -85,6 +85,9 @@ One schema for all workspaces. No per-workspace schemas.
 
 - A separate tab. Horizontal bars along the dates.
 - A bar runs from the start date to the deadline. If there is only one date — a dot/milestone.
+- Finished tasks are not drawn at all. The tab is for the deadlines still ahead, and
+  a season of completed work buries them. The board is where a finished task stays
+  visible, struck through on its own day.
 - The main scenario: see all deadlines on one scale and understand where the jam is.
 - The scale is never shorter than a month from today: with a couple of tasks it would
   otherwise take a third of the screen and look cut off.

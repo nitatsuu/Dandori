@@ -132,7 +132,6 @@ function AxisMark({ mark, onOpen }: { mark: Mark; onOpen: (id: ID) => void }) {
   const title = `${task.title} · ${rangeLabel(row)}`
 
   const classes = ['timeline__mark', mark.side === 0 ? 'timeline__mark--up' : 'timeline__mark--down']
-  if (task.done) classes.push('timeline__mark--done')
   if (row.overdue) classes.push('timeline__mark--overdue')
 
   const style = {

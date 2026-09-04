@@ -35,11 +35,16 @@ export interface Row {
   overdue: boolean
 }
 
-/** Every dated task, sorted left to right. Tasks with no dates drop out. */
+/**
+ * Every dated task, sorted left to right. Tasks with no dates drop out, and so
+ * do the finished ones: the tab is for the deadlines still ahead, and a season
+ * of completed work buries them.
+ */
 export function buildRows(tasks: Task[], labels: Label[], now: ISODate): Row[] {
   const rows: Row[] = []
 
   for (const task of tasks) {
+    if (task.done) continue
     const s = task.start_date
     const d = task.due_date
     const single = s ?? d
@@ -54,7 +59,7 @@ export function buildRows(tasks: Task[], labels: Label[], now: ISODate): Row[] {
       point: d ?? single,
       milestone: !s || !d,
       color: label ? labelVar(label.color) : NEUTRAL,
-      overdue: d !== null && !task.done && d < now,
+      overdue: d !== null && d < now,
     })
   }
 
