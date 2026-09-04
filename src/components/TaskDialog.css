@@ -257,55 +257,73 @@
   align-self: flex-start;
 }
 
-/* Custom fields: the name is the label, the value is an ordinary input. */
+/*
+ * One bordered box per field, so it sits at the same visual weight as the
+ * description above it. The name is a dim line inside the box, the value fills
+ * the body; the box lights up as a whole when either input has focus.
+ */
 
 .cfield {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.cfield:focus-within {
+  border-color: var(--accent);
 }
 
 .cfield__head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--sp-3);
 }
 
-.cfield__label {
-  overflow: hidden;
-  color: var(--text-faint);
-  font-size: var(--fz-xs);
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.cfield__label:hover {
-  color: var(--accent);
-}
-
-.cfield__rename {
-  flex: 1;
+.cfield__name,
+.cfield__value {
+  width: 100%;
   padding: 0;
   border: none;
-  border-bottom: 1px solid var(--accent);
   background: none;
-  color: var(--text);
+}
+
+.cfield__name:focus,
+.cfield__value:focus {
+  outline: none;
+}
+
+.cfield__name {
+  color: var(--text-faint);
   font-size: var(--fz-xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.cfield__rename:focus {
-  outline: none;
+.cfield__name::placeholder {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.cfield__value {
+  font-size: var(--fz-md);
 }
 
 .cfield__del {
   flex: 0 0 auto;
   color: var(--text-faint);
   font-size: var(--fz-sm);
+  line-height: 1;
+  opacity: 0;
+}
+
+/* The delete cross only shows up once the field is in play, so a row of them
+   does not compete with the content for attention. */
+.cfield:hover .cfield__del,
+.cfield:focus-within .cfield__del {
+  opacity: 1;
 }
 
 .cfield__del:hover {

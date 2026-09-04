@@ -88,11 +88,14 @@ One schema for all workspaces. No per-workspace schemas.
 - The main scenario: see all deadlines on one scale and understand where the jam is.
 - The scale is never shorter than a month from today: with a couple of tasks it would
   otherwise take a third of the screen and look cut off.
-- A summary strip is pinned along the bottom edge: every task on one line, full width,
-  with a short preview above each bar that opens the task. It lives inside the same
-  scroller as the rows, so the two halves can never drift apart. Overlapping bars are
-  packed into three sub-lanes within that single band — it stays one line, it does not
-  become a second chart.
+- An axis is pinned along the bottom edge: one line across the full width, closed by
+  an arrow, with ticks on Mondays and month boundaries and month names underneath.
+  One dot per task at its deadline (its start date if it has no deadline), and a short
+  callout joined to the dot by a lead. Callouts alternate above and below the axis and
+  stack into a few levels when they crowd; when nothing fits the callout is dropped and
+  the dot stays, still clickable. Clicking a dot or a callout opens the task.
+  The axis lives inside the same scroller as the rows, so the two halves cannot drift
+  apart. It shows deadlines, not spans — duration is what the rows above are for.
 - On the phone it scrolls horizontally, on the laptop it fits entirely.
 
 ### Notes

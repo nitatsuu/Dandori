@@ -1,17 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  addDays,
-  dateRange,
-  dayLabel,
-  diffDays,
-  isWeekend,
-  monthLabel,
-  startOfWeek,
-} from '../db/dates'
+import { addDays, dateRange, dayLabel, diffDays } from '../db/dates'
 import { useToday } from '../state/useToday'
 import type { ID, ISODate, Label, Task } from '../db/types'
-import { SummaryStrip } from './timeline/SummaryStrip'
-import { buildRows, clamp, rangeLabel, type Row } from './timeline/model'
+import { Axis } from './timeline/Axis'
+import { buildGrid, buildRows, clamp, rangeLabel, type Cell, type Row } from './timeline/model'
 import './Timeline.css'
 
 export interface TimelineProps {
@@ -39,20 +31,9 @@ const NAME_W_COMPACT = 116
 const COMPACT_W = 620
 /** Room for the vertical scrollbar, otherwise the scale scrolls itself sideways. */
 const GUTTER = 10
-
-interface Cell {
-  date: ISODate
-  week: boolean
-  month: boolean
-  weekend: boolean
-}
-
-interface Month {
-  key: string
-  start: number
-  span: number
-  label: string
-}
+/** Callout levels of the axis. Fewer on a narrow screen: the axis must stay short. */
+const AXIS_LEVELS = 3
+const AXIS_LEVELS_COMPACT = 2
 
 /** Every dated task on one scale: where it starts, where the deadline is, what is overdue. */
 export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
@@ -149,17 +130,18 @@ export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
             ))}
           </div>
 
-          {rows.length > 0 && (
-            <SummaryStrip
-              rows={rows}
-              first={days[0]}
-              count={days.length}
-              dayW={dayW}
-              trackW={trackW}
-              todayIndex={todayIndex}
-              onOpen={onOpenTask}
-            />
-          )}
+          <Axis
+            rows={rows}
+            cells={cells}
+            months={months}
+            levels={compact ? AXIS_LEVELS_COMPACT : AXIS_LEVELS}
+            first={days[0]}
+            count={days.length}
+            dayW={dayW}
+            trackW={trackW}
+            todayIndex={todayIndex}
+            onOpen={onOpenTask}
+          />
         </div>
       </div>
     </div>
@@ -241,25 +223,6 @@ function buildScale(rows: Row[], now: ISODate): ISODate[] {
     end = addDays(start, MAX_SPAN_DAYS)
   }
   return dateRange(start, end)
-}
-
-function buildGrid(days: ISODate[]): { cells: Cell[]; months: Month[]; weekOffset: number } {
-  const cells: Cell[] = days.map((date) => ({
-    date,
-    week: startOfWeek(date) === date,
-    month: date.endsWith('-01'),
-    weekend: isWeekend(date),
-  }))
-
-  const months: Month[] = []
-  days.forEach((date, i) => {
-    const key = date.slice(0, 7)
-    const last = months.at(-1)
-    if (last && last.key === key) last.span += 1
-    else months.push({ key, start: i, span: 1, label: monthLabel(date) })
-  })
-
-  return { cells, months, weekOffset: Math.max(0, cells.findIndex((c) => c.week)) }
 }
 
 function fitDayWidth(raw: number, min: number): number {

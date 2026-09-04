@@ -187,31 +187,47 @@
 }
 
 /*
- * Summary strip: every task at once on one line, pinned to the bottom edge.
- * It sits inside the same scroller as the rows, so it takes the horizontal
- * scroll from it for free and can never drift out of step with the scale.
+ * The axis: every deadline as a dot on one horizontal line, pinned to the
+ * bottom edge. It sits inside the same scroller as the rows, so it takes the
+ * horizontal scroll from it for free and can never drift out of step.
+ *
+ * The vertical layout is built from the parts below: callout levels on both
+ * sides, the gap to the axis, the ticks and the row of month names. The height
+ * is their sum, so changing a part never leaves the axis hanging.
  */
 
-.timeline__strip {
-  --tl-bar-h: 10px;
-  /* Vertical shift between neighbouring bars: enough to tell them apart,
-     small enough that the whole thing still reads as one line. */
-  --tl-bar-step: 6px;
-  --tl-band-h: 22px;
-  --tl-tier-step: 14px;
-  --tl-strip-pad: 5px;
+.timeline__axis {
+  --tl-lv-h: 16px;
+  /* Set from JS: the packing and the height have to agree on the level count. */
+  --tl-lv-n: 3;
+  /* Axis to the nearest callout level. Wide enough that a nudged dot never
+     reaches the text of the level above it. */
+  --tl-gap: 12px;
+  --tl-months-h: 15px;
+  /* How far the month ticks reach below the line and above it. */
+  --tl-tick: 11px;
+  --tl-tick-up: 3px;
+  --tl-pad: 4px;
+  /* Distance from the line to the bottom edge of the axis, and to the top one. */
+  --tl-axis-y: calc(
+    var(--tl-pad) + var(--tl-lv-n) * var(--tl-lv-h) + var(--tl-gap) + var(--tl-months-h) +
+      var(--tl-tick)
+  );
+  --tl-axis-t: calc(
+    var(--tl-tick-up) + var(--tl-gap) + var(--tl-lv-n) * var(--tl-lv-h) + var(--tl-pad)
+  );
   position: sticky;
   bottom: 0;
   z-index: 4;
   display: flex;
   flex: 0 0 auto;
-  height: 70px;
+  height: calc(var(--tl-axis-y) + var(--tl-axis-t));
   background: var(--bg);
   border-top: 1px solid var(--border);
 }
 
-/* Under the name column: hides the bars that scroll behind it. */
-.timeline__strip-cap {
+/* Under the name column: hides whatever scrolls behind it. */
+.timeline__axis-cap {
   position: sticky;
   left: 0;
   z-index: 1;
@@ -220,97 +236,168 @@
   border-right: 1px solid var(--border);
 }
 
-.timeline__strip-track {
+.timeline__axis-track {
   position: relative;
-  /* Own stacking context: the bars below stack among themselves and stay under
-     the cap, instead of crawling out over the name column. */
+  /* Own stacking context: the marks stack among themselves and stay under the
+     cap instead of crawling out over the name column. */
   z-index: 0;
   flex: 0 0 var(--tl-track-w);
 }
 
-.timeline__strip-today {
+.timeline__axis-line {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  margin-left: -1px;
-  background: var(--today);
-  pointer-events: none;
+  left: 0;
+  right: 0;
+  bottom: var(--tl-axis-y);
+  height: 1px;
+  background: var(--border-strong);
 }
 
-/* A zero-width anchor at the start of the task: the preview and the bar hang off it. */
+/* The arrow closing the axis on the right. */
+.timeline__axis-line::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 7px solid var(--border-strong);
+  transform: translateY(-50%);
+}
+
+.timeline__tick {
+  position: absolute;
+  bottom: calc(var(--tl-axis-y) - 5px);
+  width: 1px;
+  height: 5px;
+  background: var(--border-strong);
+}
+
+.timeline__tick--month {
+  bottom: calc(var(--tl-axis-y) - var(--tl-tick));
+  height: calc(var(--tl-tick) + var(--tl-tick-up));
+  background: var(--text-faint);
+}
+
+.timeline__axis-month {
+  position: absolute;
+  z-index: 2;
+  bottom: calc(var(--tl-axis-y) - var(--tl-tick) - var(--tl-months-h));
+  overflow: hidden;
+  /* Sits on top of the leads running down to the lower callouts. */
+  background: var(--bg);
+  color: var(--text-dim);
+  font-size: var(--fz-xs);
+  line-height: var(--tl-months-h);
+  white-space: nowrap;
+}
+
+/* Today is a mark of the axis itself, not a line laid over it. */
+.timeline__axis-today {
+  position: absolute;
+  bottom: calc(var(--tl-axis-y) - var(--tl-tick) - 2px);
+  width: 2px;
+  height: calc(var(--tl-tick) + var(--tl-tick-up) + 5px);
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--today);
+}
+
+/* A zero-width anchor at the deadline: the dot, its lead and the callout hang off it. */
 .timeline__mark {
   position: absolute;
   top: 0;
   bottom: 0;
-  z-index: calc(var(--tl-tier) + 1);
+  z-index: 1;
   width: 0;
   pointer-events: none;
 }
 
-.timeline__mark-name,
-.timeline__mark-bar,
-.timeline__mark-dot {
+.timeline__point {
   position: absolute;
   left: 0;
+  bottom: calc(var(--tl-axis-y) - 4px + var(--tl-slot) * 7px);
+  width: 9px;
+  height: 9px;
+  margin-left: -4.5px;
+  border-radius: 50%;
+  background: var(--tl-color);
+  /* A rim in the background colour: the axis does not run through the dot and
+     two dots side by side stay apart. */
+  box-shadow: 0 0 0 2px var(--bg);
   pointer-events: auto;
   cursor: pointer;
 }
 
-.timeline__mark-name {
-  bottom: calc(var(--tl-strip-pad) + var(--tl-band-h) + var(--tl-tier) * var(--tl-tier-step));
-  height: var(--tl-tier-step);
+.timeline__lead {
+  position: absolute;
+  left: 0;
+  width: 1px;
+  margin-left: -0.5px;
+  background: var(--border-strong);
+}
+
+.timeline__mark--up .timeline__lead {
+  bottom: var(--tl-axis-y);
+  height: calc(var(--tl-tick-up) + var(--tl-gap) + var(--tl-lv) * var(--tl-lv-h));
+}
+
+.timeline__mark--down .timeline__lead {
+  top: var(--tl-axis-t);
+  height: calc(
+    var(--tl-tick) + var(--tl-months-h) + var(--tl-gap) + var(--tl-lv) * var(--tl-lv-h)
+  );
+}
+
+.timeline__callout {
+  position: absolute;
+  height: var(--tl-lv-h);
   overflow: hidden;
   color: var(--text-dim);
   font-size: var(--fz-xs);
-  line-height: var(--tl-tier-step);
-  text-align: left;
+  line-height: var(--tl-lv-h);
+  text-align: center;
   white-space: nowrap;
   text-overflow: ellipsis;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
-.timeline__mark-bar,
-.timeline__mark-dot {
-  bottom: calc(var(--tl-strip-pad) + var(--tl-tier) * var(--tl-bar-step));
-  height: var(--tl-bar-h);
-  border-radius: 999px;
-  background: var(--tl-color);
-  /* Bars overlap: a rim in the background colour keeps the edges of each one
-     visible, and the transparency shows that something lies underneath. */
-  box-shadow: 0 0 0 1px var(--bg);
-  opacity: 0.85;
+.timeline__mark--up .timeline__callout {
+  bottom: calc(
+    var(--tl-axis-y) + var(--tl-tick-up) + var(--tl-gap) + var(--tl-lv) * var(--tl-lv-h)
+  );
 }
 
-.timeline__mark-dot {
-  border-radius: 50%;
+.timeline__mark--down .timeline__callout {
+  top: calc(
+    var(--tl-axis-t) + var(--tl-tick) + var(--tl-months-h) + var(--tl-gap) + var(--tl-lv) *
+      var(--tl-lv-h)
+  );
 }
 
-.timeline__mark:hover .timeline__mark-bar,
-.timeline__mark:hover .timeline__mark-dot {
-  opacity: 1;
-}
-
-.timeline__mark:hover .timeline__mark-name {
+.timeline__mark:hover .timeline__callout {
   color: var(--text);
 }
 
-.timeline__mark--done .timeline__mark-bar,
-.timeline__mark--done .timeline__mark-dot {
-  opacity: 0.4;
+.timeline__mark:hover .timeline__lead {
+  background: var(--text-faint);
 }
 
-.timeline__mark--done .timeline__mark-name {
+.timeline__mark--done .timeline__point {
+  opacity: 0.45;
+}
+
+.timeline__mark--done .timeline__callout {
   color: var(--text-faint);
   text-decoration: line-through;
 }
 
-.timeline__mark--overdue .timeline__mark-bar,
-.timeline__mark--overdue .timeline__mark-dot {
-  box-shadow: 0 0 0 1.5px var(--danger);
-  opacity: 1;
+.timeline__mark--overdue .timeline__point {
+  background: var(--danger);
 }
 
-.timeline__mark--overdue .timeline__mark-name {
+.timeline__mark--overdue .timeline__callout {
   color: var(--danger);
 }
 
@@ -323,13 +410,14 @@
     padding: 0 var(--sp-3);
   }
 
-  /* A finger is not a mouse: taller bars and preview lines, at the price
-     of a slightly taller strip. */
-  .timeline__strip {
-    --tl-bar-h: 12px;
-    --tl-bar-step: 8px;
-    --tl-band-h: 28px;
-    --tl-tier-step: 16px;
-    height: 84px;
+  /* A finger is not a mouse: taller callout lines and fewer levels, so the
+     axis does not eat the screen. */
+  .timeline__axis {
+    --tl-lv-h: 18px;
+  }
+
+  .timeline__point {
+    /* The dot itself stays small, the tap target around it does not. */
+    box-shadow: 0 0 0 3px var(--bg);
   }
 }

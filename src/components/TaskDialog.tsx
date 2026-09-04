@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { renderMarkdown } from '../lib/markdown'
 import { useAutosave } from '../lib/useAutosave'
 import { useEscape } from '../lib/useEscape'
@@ -14,6 +14,9 @@ import {
   type Note,
 } from '../db/types'
 import './TaskDialog.css'
+
+/** Same debounce as the shared autosave hook: one write per pause in typing. */
+const SAVE_DELAY = 500
 
 interface Props {
   taskId: ID
@@ -477,10 +480,11 @@ function ColorPicker({
 // --------------------------------------------------------------- custom fields
 
 /*
- * A custom field reads as a named value, not as a pair of blank boxes: the name
- * becomes the field's label and the value gets the same input treatment as any
- * other field on the card. Clicking the label turns it back into a text box,
- * which is the only time the name is editable.
+ * A custom field has to carry the same visual weight as the description box next
+ * to it, otherwise it reads as something bolted onto the card. So the pair lives
+ * inside one bordered box: the name on a dim line at the top, the value below in
+ * the body. Both are plain inputs — nothing to click into an editing mode, and
+ * nothing to save.
  */
 
 function CustomFields({
@@ -514,6 +518,7 @@ function CustomFields({
         <CustomFieldRow
           key={field.id ?? i}
           field={field}
+          autoFocus={field.name === '' && field.value === ''}
           onChange={(next) => onChange(fields.map((f, j) => (i === j ? next : f)))}
           onRemove={() => onChange(fields.filter((_, j) => j !== i))}
         />
@@ -524,53 +529,84 @@ function CustomFields({
 
 function CustomFieldRow({
   field,
+  autoFocus,
   onChange,
   onRemove,
 }: {
   field: CustomField
+  autoFocus: boolean
   onChange: (f: CustomField) => void
   onRemove: () => void
 }) {
-  // A field created a moment ago has no name yet, so it opens ready to be named.
-  const [naming, setNaming] = useState(field.name === '')
-  const [name, setName] = useAutosave(field.name, (v) => onChange({ ...field, name: v }))
-  const [value, setValue] = useAutosave(field.value, (v) => onChange({ ...field, value: v }))
+  const [draft, setDraft] = useState(field)
+  const current = useRef(field)
+  const synced = useRef(field)
+  const dirty = useRef(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const changeRef = useRef(onChange)
+  useEffect(() => {
+    changeRef.current = onChange
+  })
+
+  /*
+   * The whole row is written at once, not one input at a time.
+   * Both inputs live in the same object, so two independent debounced writes
+   * would each send a copy built from whatever they captured — and the later
+   * one would put the other's field back to its old value.
+   */
+  const flush = useCallback(() => {
+    if (timer.current !== null) {
+      clearTimeout(timer.current)
+      timer.current = null
+    }
+    if (!dirty.current) return
+    dirty.current = false
+    synced.current = current.current
+    changeRef.current(current.current)
+  }, [])
+
+  function edit(part: Partial<CustomField>) {
+    const next = { ...current.current, ...part }
+    current.current = next
+    setDraft(next)
+    dirty.current = true
+    if (timer.current !== null) clearTimeout(timer.current)
+    timer.current = setTimeout(flush, SAVE_DELAY)
+  }
+
+  // An edit arriving from another device is taken only while nothing local is
+  // waiting to be written; otherwise it would yank the text from under the caret.
+  useEffect(() => {
+    if (field.name === synced.current.name && field.value === synced.current.value) return
+    synced.current = field
+    if (dirty.current) return
+    current.current = field
+    setDraft(field)
+  }, [field])
+
+  useEffect(() => flush, [flush])
 
   return (
     <div className="cfield">
       <div className="cfield__head">
-        {naming ? (
-          <input
-            className="cfield__rename"
-            value={name}
-            placeholder="Имя поля"
-            autoFocus
-            onChange={(e) => setName(e.target.value)}
-            onBlur={() => setNaming(false)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur()
-            }}
-          />
-        ) : (
-          <button
-            className="cfield__label"
-            onClick={() => setNaming(true)}
-            title="Переименовать поле"
-          >
-            {name.trim() || 'Без имени'}
-          </button>
-        )}
-
+        <input
+          className="cfield__name"
+          value={draft.name}
+          placeholder="Имя поля"
+          autoFocus={autoFocus}
+          onChange={(e) => edit({ name: e.target.value })}
+        />
         <button className="cfield__del" onClick={onRemove} aria-label="Удалить поле">
           ✕
         </button>
       </div>
 
       <input
-        className="field"
-        value={value}
+        className="cfield__value"
+        value={draft.value}
         placeholder="Значение"
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => edit({ value: e.target.value })}
       />
     </div>
   )
