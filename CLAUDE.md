@@ -94,8 +94,9 @@ One schema for all workspaces. No per-workspace schemas.
   scale that spans a year, and dropping the far tasks to make room would lose the
   overview the tab exists for; the switch keeps both. Nothing is hidden in either
   mode, only the zoom differs. The choice is remembered per device.
-  There is no switch on the phone: the scale is read by scrolling there whatever
-  the mode, so the corner stays a bare spacer and leaves its width to the axis.
+  The phone gets no switch and is always `Месяц`: 400 px cannot hold a year of
+  anything, so days stay readable and the rest of the scale is scrolled to. The
+  corner there stays a bare spacer and leaves its width to the axis.
 - A column is a day only while days are wide enough to read. Past that the step
   grows to a week and then to a month, so a grant two years out still fits on the
   screen instead of squeezing every day into a hairline. Dates keep their exact

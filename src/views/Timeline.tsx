@@ -39,12 +39,8 @@ const NAME_W_COMPACT = 116
 const COMPACT_W = 620
 /** Room for the vertical scrollbar, otherwise the scale scrolls itself sideways. */
 const GUTTER = 10
-/**
- * How far the track may run before the scale coarsens its step. A laptop asks it
- * to fit; a phone has no width to fit anything into and takes scrolling instead.
- */
+/** How far the track may run before the scale coarsens its step: one screen. */
 const SCREENS = 1
-const SCREENS_COMPACT = 3
 /** Callout levels of the axis. Fewer on a narrow screen: the axis must stay short. */
 const AXIS_LEVELS = 3
 const AXIS_LEVELS_COMPACT = 2
@@ -75,14 +71,15 @@ export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
   const nameW = compact ? NAME_W_COMPACT : NAME_W
   const free = Math.max(240, width - nameW - GUTTER)
   /*
-   * A phone has no range to choose from: whatever the scale, it is read by
-   * scrolling, so the switch is not drawn there and the whole span is the only
-   * mode. A choice made on the laptop must not leak into it either.
+   * A phone has no range to choose from and no switch to choose with: 400 px
+   * cannot hold a year of anything, so it is always the month — readable days,
+   * and the rest of the scale reached the way everything is reached there, by
+   * scrolling. A choice made on the laptop does not leak into it either.
    */
-  const range = compact ? 'all' : zoom
+  const range = compact ? 'month' : zoom
   const scale = useMemo(
-    () => buildScale(span.from, span.to, free, free * (compact ? SCREENS_COMPACT : SCREENS), range),
-    [span, free, compact, range],
+    () => buildScale(span.from, span.to, free, free * SCREENS, range),
+    [span, free, range],
   )
 
   /*
