@@ -8,6 +8,7 @@ import {
   type RefObject,
 } from 'react'
 import {
+  closestCenter,
   DndContext,
   DragOverlay,
   MouseSensor,
@@ -70,36 +71,69 @@ const WINDOW_FORWARD = 13
  * columns, where the pointer is inside nothing at all.
  */
 /*
- * The drop goes to whatever is actually under the pointer, read from the page
- * itself. Comparing rectangles put a card's own column ahead of the one under
- * the cursor — a day column is as tall as the board, so it never looked close —
- * and the pinned columns made it worse: they float over the strip, and the
- * rectangle dnd-kit keeps for them slides away with the scroll while the column
- * stays put, so a card dropped on «Без даты» landed on the day hidden behind it.
- * The page knows what is on top; rectangles are only the fallback for the gaps
- * between columns, where the pointer is inside nothing at all.
+ * Two questions, answered by different means.
+ *
+ * Which column: whatever the page says is under the pointer. Rectangles put a
+ * card's own column ahead of the one under the cursor — a day column is as tall
+ * as the board, so it never looked close — and the pinned columns made it worse:
+ * they float over the strip, and the rectangle dnd-kit keeps for them slides away
+ * with the scroll while the column stays put, so a card dropped on «Без даты»
+ * landed on the day hidden behind it.
+ *
+ * Which card inside it: the rectangles, which dnd-kit measured before the drag
+ * began. The cards slide aside to open a gap as one is carried over them, and the
+ * pointer then falls into that gap and reads as a drop on the column itself —
+ * which sends the card to the end of the very column it came from, so reordering
+ * a day did nothing at all.
  */
 const collide: CollisionDetection = (args) => {
   const { pointerCoordinates, droppableContainers } = args
+  const key = pointerCoordinates ? columnUnderPointer(pointerCoordinates, droppableContainers) : null
 
-  if (pointerCoordinates) {
-    const nodes = new Map<Element, (typeof droppableContainers)[number]>()
-    for (const container of droppableContainers) {
-      const node = container.node.current
-      if (node) nodes.set(node, container)
+  if (key !== null) {
+    const inside = droppableContainers.filter((c) => columnOfContainer(c) === key)
+    const cards = inside.filter(isCard)
+
+    if (cards.length > 0) {
+      const nearest = closestCenter({ ...args, droppableContainers: cards })
+      if (nearest.length > 0) return nearest
     }
 
-    // The whole stack, nearest first: the card under the pointer wins over the
-    // column holding it. The card flying under the cursor is in the stack too and
-    // is simply not a drop target, so it is passed over.
-    for (const node of document.elementsFromPoint(pointerCoordinates.x, pointerCoordinates.y)) {
-      const container = nodes.get(node)
-      if (container) return [{ id: container.id, data: { droppableContainer: container } }]
-    }
+    const column = inside.find((c) => !isCard(c))
+    if (column) return [{ id: column.id, data: { droppableContainer: column } }]
   }
 
   const under = pointerWithin(args)
   return under.length > 0 ? under : rectIntersection(args)
+}
+
+type Container = Parameters<CollisionDetection>[0]['droppableContainers'][number]
+
+/** A card carries the key of its column; a column droppable is its own. */
+function isCard(container: Container): boolean {
+  return container.data.current?.column !== undefined
+}
+
+function columnOfContainer(container: Container): string | null {
+  const own = container.data.current?.column
+  return typeof own === 'string' ? own : keyFromColumnId(String(container.id))
+}
+
+/** The topmost column the pointer is inside, read from the page itself. */
+function columnUnderPointer(at: { x: number; y: number }, containers: Container[]): string | null {
+  const nodes = new Map<Element, Container>()
+  for (const container of containers) {
+    const node = container.node.current
+    if (node) nodes.set(node, container)
+  }
+
+  // The card flying under the cursor is in the stack too and is simply skipped:
+  // it is not among the droppables while it is being dragged.
+  for (const node of document.elementsFromPoint(at.x, at.y)) {
+    const container = nodes.get(node)
+    if (container) return columnOfContainer(container)
+  }
+  return null
 }
 
 export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask }: BoardProps) {
@@ -145,27 +179,32 @@ export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask 
     const column = groups.get(key) ?? emptyOf<Task>()
     const rest = column.filter((t) => t.id !== id)
 
-    let index: number
+    // The place is named by the task that will follow, not by an index: with a
+    // filter on, the index in the visible list does not match the index in the
+    // full column.
+    let beforeId: ID | null
     if (onColumn !== null) {
       // Dropped on empty space in the column — the task goes to the end.
-      index = rest.length
+      beforeId = null
     } else {
       const at = rest.findIndex((t) => t.id === overId)
       if (at < 0) return
       // Moving down inside its own column puts the card after the one it was released over.
       const from = column.findIndex((t) => t.id === id)
       const to = column.findIndex((t) => t.id === overId)
-      index = from >= 0 && from < to ? at + 1 : at
+      beforeId = rest[from >= 0 && from < to ? at + 1 : at]?.id ?? null
     }
 
-    // The card was put back where it was: a pointless write would only wake sync for nothing.
-    const before = groups.get(columnKey(task.due_date)) ?? emptyOf<Task>()
-    if (before === column && before[index]?.id === id) return
+    // The card was put back where it was: a pointless write would only wake sync
+    // for nothing. It is back where it was when the day is the same and the same
+    // task still follows it.
+    const date = dateFromKey(key)
+    if (task.due_date === date) {
+      const now = column.findIndex((t) => t.id === id)
+      if (now >= 0 && (column[now + 1]?.id ?? null) === beforeId) return
+    }
 
-    // The position is given by the neighbouring task, not by an index: with a
-    // filter on, the index in the visible list does not match the index in the
-    // full column.
-    void moveTask(id, dateFromKey(key), rest[index]?.id ?? null)
+    void moveTask(id, date, beforeId)
   }
 
   const active = dragged ? tasks.find((t) => t.id === dragged) : undefined
