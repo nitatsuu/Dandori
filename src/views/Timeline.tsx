@@ -74,9 +74,15 @@ export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
   const compact = width > 0 && width < COMPACT_W
   const nameW = compact ? NAME_W_COMPACT : NAME_W
   const free = Math.max(240, width - nameW - GUTTER)
+  /*
+   * A phone has no range to choose from: whatever the scale, it is read by
+   * scrolling, so the switch is not drawn there and the whole span is the only
+   * mode. A choice made on the laptop must not leak into it either.
+   */
+  const range = compact ? 'all' : zoom
   const scale = useMemo(
-    () => buildScale(span.from, span.to, free, free * (compact ? SCREENS_COMPACT : SCREENS), zoom),
-    [span, free, compact, zoom],
+    () => buildScale(span.from, span.to, free, free * (compact ? SCREENS_COMPACT : SCREENS), range),
+    [span, free, compact, range],
   )
 
   /*
@@ -88,11 +94,11 @@ export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
   const centred = useRef<string | null>(null)
   useEffect(() => {
     const el = scrollRef.current
-    if (!el || width === 0 || centred.current === zoom) return
-    centred.current = zoom
+    if (!el || width === 0 || centred.current === range) return
+    centred.current = range
     if (el.scrollWidth <= el.clientWidth) return
     el.scrollLeft = nameW + midOf(scale, now) - el.clientWidth / 2
-  }, [width, zoom, nameW, scale, now])
+  }, [width, range, nameW, scale, now])
 
   const vars = {
     '--tl-name-w': `${nameW}px`,
@@ -146,7 +152,7 @@ export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
             scale={scale}
             levels={compact ? AXIS_LEVELS_COMPACT : AXIS_LEVELS}
             today={now}
-            zoom={zoom}
+            zoom={compact ? null : zoom}
             onZoom={setZoom}
             onOpen={onOpenTask}
           />

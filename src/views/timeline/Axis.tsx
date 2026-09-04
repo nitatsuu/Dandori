@@ -50,7 +50,8 @@ export interface AxisProps {
   /** Callout levels available on each side of the axis; the height follows it. */
   levels: number
   today: ISODate
-  zoom: TimelineZoom
+  /** `null` on a phone: there the scale is always scrolled, so there is nothing to switch. */
+  zoom: TimelineZoom | null
   onZoom: (zoom: TimelineZoom) => void
   onOpen: (id: ID) => void
 }
@@ -74,18 +75,20 @@ export function Axis({ rows, scale, levels, today, zoom, onZoom, onOpen }: AxisP
 
   return (
     <div className="timeline__axis" style={{ '--tl-lv-n': levels } as React.CSSProperties}>
-      <div className="timeline__axis-cap">
-        <div className="timeline__zoom">
-          {TIMELINE_ZOOMS.map((z) => (
-            <button
-              key={z}
-              className={`timeline__zoom-btn${z === zoom ? ' timeline__zoom-btn--on' : ''}`}
-              onClick={() => onZoom(z)}
-            >
-              {TIMELINE_ZOOM_TITLES[z]}
-            </button>
-          ))}
-        </div>
+      <div className={`timeline__axis-cap${zoom ? ' timeline__axis-cap--switch' : ''}`}>
+        {zoom && (
+          <div className="timeline__zoom">
+            {TIMELINE_ZOOMS.map((z) => (
+              <button
+                key={z}
+                className={`timeline__zoom-btn${z === zoom ? ' timeline__zoom-btn--on' : ''}`}
+                onClick={() => onZoom(z)}
+              >
+                {TIMELINE_ZOOM_TITLES[z]}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       <div className="timeline__axis-track">
         <div className="timeline__axis-line" />

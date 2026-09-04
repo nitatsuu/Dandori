@@ -232,44 +232,52 @@
 /* Under the name column: hides whatever scrolls behind it. */
 /*
  * The corner of the axis: a spacer that keeps the axis in step with the tracks
- * of the rows above, and the one place on the tab with room to spare. The range
- * switch lives in it. Pinned, so the switch does not scroll off with the scale.
+ * of the rows above, and the one place on the tab with room to spare. On a
+ * laptop the range switch sits at the top of it, and the corner is pinned so the
+ * switch does not scroll off with the scale. A phone has no switch and the
+ * corner goes back to being a bare spacer — a blank pinned block would only take
+ * a fifth of the width away from the axis.
  */
 .timeline__axis-cap {
+  flex: 0 0 var(--tl-name-w);
+}
+
+.timeline__axis-cap--switch {
   position: sticky;
   left: 0;
   z-index: 3;
   display: flex;
-  align-items: center;
-  flex: 0 0 var(--tl-name-w);
-  padding: 0 var(--sp-3);
+  align-items: flex-start;
+  padding: var(--sp-3) var(--sp-4) 0;
   background: var(--bg);
   border-right: 1px solid var(--border);
 }
 
 .timeline__zoom {
   display: flex;
-  flex-direction: column;
   gap: var(--sp-1);
-  padding: 2px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  padding: var(--sp-1);
+  border-radius: var(--radius-lg);
   background: var(--bg-sunken);
 }
 
 .timeline__zoom-btn {
-  height: 22px;
+  height: 24px;
   padding: 0 var(--sp-4);
-  border-radius: calc(var(--radius) - 1px);
+  border-radius: var(--radius);
   color: var(--text-dim);
   font-size: var(--fz-sm);
 }
 
+.timeline__zoom-btn:hover {
+  color: var(--text);
+}
+
 .timeline__zoom-btn--on {
   background: var(--bg-raised);
-  color: var(--text);
-  font-weight: 600;
   box-shadow: var(--shadow-card);
+  color: var(--text);
+  font-weight: 500;
 }
 
 .timeline__axis-track {
