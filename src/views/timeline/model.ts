@@ -1,4 +1,14 @@
-import { dayLabel, isWeekend, monthLabel, startOfWeek } from '../../db/dates'
+import {
+  addDays,
+  addMonths,
+  dayLabel,
+  diffDays,
+  isWeekend,
+  monthLabel,
+  startOfMonth,
+  startOfWeek,
+  today,
+} from '../../db/dates'
 import type { ISODate, Label, Task } from '../../db/types'
 import { labelVar, taskLabels } from '../../lib/labels'
 
@@ -66,36 +76,171 @@ export function clamp(v: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, v))
 }
 
-export interface Cell {
-  date: ISODate
-  week: boolean
-  month: boolean
-  weekend: boolean
+/*
+ * The scale.
+ *
+ * A column is a day only while days are wide enough to read. Past that the step
+ * grows to a week and then to a month: a grant two years out used to squeeze the
+ * days down to hairlines, and the whole point of the tab is to take in every
+ * deadline at once. Dates keep their exact place inside a column, so nothing is
+ * rounded to the step — only the labels and the grid become coarser.
+ */
+export type Unit = 'day' | 'week' | 'month'
+
+interface Step {
+  unit: Unit
+  /** Below this a column is not worth drawing. */
+  min: number
+  /** Above this the columns look stretched. */
+  max: number
 }
 
-export interface Month {
+const STEPS: Step[] = [
+  { unit: 'day', min: 14, max: 44 },
+  { unit: 'week', min: 26, max: 120 },
+  { unit: 'month', min: 46, max: 200 },
+]
+
+export interface Cell {
+  /** First date of the column. */
+  date: ISODate
+  /** Days it covers — a month is not a fixed number of them. */
+  days: number
+  /** Days from the start of the scale to the start of the column. */
+  offset: number
+  /** Opens a new bracket: a month above days and weeks, a year above months. */
+  bracket: boolean
+  /** Day step only. */
+  weekend: boolean
+  week: boolean
+  today: boolean
+}
+
+/** A run of columns under one label: a month over days and weeks, a year over months. */
+export interface Bracket {
   key: string
+  label: string
   start: number
   span: number
-  label: string
 }
 
-/** Day cells and month runs of the scale — the day header and the axis share them. */
-export function buildGrid(days: ISODate[]): { cells: Cell[]; months: Month[]; weekOffset: number } {
-  const cells: Cell[] = days.map((date) => ({
-    date,
-    week: startOfWeek(date) === date,
-    month: date.endsWith('-01'),
-    weekend: isWeekend(date),
-  }))
+export interface Scale {
+  unit: Unit
+  /** First date of the scale — the step boundary at or before the earliest date. */
+  first: ISODate
+  /** Days the scale covers. */
+  days: number
+  cells: Cell[]
+  brackets: Bracket[]
+  cellW: number
+  trackW: number
+  /** Column index of every day of the scale. */
+  cellOfDay: number[]
+}
 
-  const months: Month[] = []
-  days.forEach((date, i) => {
-    const key = date.slice(0, 7)
-    const last = months.at(-1)
+/**
+ * Picks the step and lays the columns out.
+ *
+ * `budget` is how wide the track may grow before the step has to coarsen: a
+ * laptop asks the scale to fit, a phone tolerates a few screens of scrolling.
+ */
+export function buildScale(from: ISODate, to: ISODate, free: number, budget: number): Scale {
+  let step = STEPS[STEPS.length - 1]
+  let cells = cellsOf(step.unit, from, to)
+
+  for (const candidate of STEPS) {
+    const laid = cellsOf(candidate.unit, from, to)
+    if (laid.length * candidate.min <= budget) {
+      step = candidate
+      cells = laid
+      break
+    }
+  }
+
+  const cellW = clamp(free / cells.length, step.min, step.max)
+  const first = cells[0].date
+  const days = cells.reduce((n, c) => n + c.days, 0)
+
+  const cellOfDay = new Array<number>(days)
+  for (const [i, cell] of cells.entries()) {
+    for (let d = 0; d < cell.days; d++) cellOfDay[cell.offset + d] = i
+  }
+
+  return {
+    unit: step.unit,
+    first,
+    days,
+    cells,
+    brackets: bracketsOf(step.unit, cells),
+    cellW,
+    trackW: cellW * cells.length,
+    cellOfDay,
+  }
+}
+
+function cellsOf(unit: Unit, from: ISODate, to: ISODate): Cell[] {
+  const now = today()
+  const start = unit === 'day' ? from : unit === 'week' ? startOfWeek(from) : startOfMonth(from)
+  const cells: Cell[] = []
+  let date = start
+  let offset = 0
+
+  while (date <= to) {
+    const days = unit === 'day' ? 1 : unit === 'week' ? 7 : diffDays(date, addMonths(date, 1))
+    const next = addDays(date, days)
+    cells.push({
+      date,
+      days,
+      offset,
+      bracket: unit === 'month' ? date.endsWith('-01-01') : date.endsWith('-01'),
+      weekend: unit === 'day' && isWeekend(date),
+      week: unit === 'day' && startOfWeek(date) === date,
+      today: now >= date && now < next,
+    })
+    offset += days
+    date = next
+  }
+
+  // The first column opens its own bracket whatever the calendar says.
+  if (cells.length > 0) cells[0].bracket = true
+  return cells
+}
+
+function bracketsOf(unit: Unit, cells: Cell[]): Bracket[] {
+  const brackets: Bracket[] = []
+
+  for (const [i, cell] of cells.entries()) {
+    const key = unit === 'month' ? cell.date.slice(0, 4) : cell.date.slice(0, 7)
+    const last = brackets.at(-1)
     if (last && last.key === key) last.span += 1
-    else months.push({ key, start: i, span: 1, label: monthLabel(date) })
-  })
+    else {
+      brackets.push({
+        key,
+        label: unit === 'month' ? key : monthLabel(cell.date),
+        start: i,
+        span: 1,
+      })
+    }
+  }
 
-  return { cells, months, weekOffset: Math.max(0, cells.findIndex((c) => c.week)) }
+  return brackets
+}
+
+/** Left edge of a date on the track. */
+export function xOf(scale: Scale, date: ISODate): number {
+  const day = clamp(diffDays(scale.first, date), 0, scale.days - 1)
+  const index = scale.cellOfDay[day]
+  const cell = scale.cells[index]
+  return (index + (day - cell.offset) / cell.days) * scale.cellW
+}
+
+/** Width of one day at that point of the track. */
+export function dayWidth(scale: Scale, date: ISODate): number {
+  const day = clamp(diffDays(scale.first, date), 0, scale.days - 1)
+  return scale.cellW / scale.cells[scale.cellOfDay[day]].days
+}
+
+/** Middle of a date on the track — where a dot sits. */
+export function midOf(scale: Scale, date: ISODate): number {
+  return xOf(scale, date) + dayWidth(scale, date) / 2
 }

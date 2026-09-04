@@ -1,7 +1,8 @@
 /*
- * The scale is a grid of day columns. JS computes the day width and puts it in
- * --tl-day-w; here it is only handed out to the bars, the headers and the
- * today line.
+ * The scale is a grid of columns — a day, a week or a month, whichever the width
+ * allows. JS computes the column width and puts it in --tl-cell-w; here it is
+ * only handed out to the headers and the tiling of the rows. Bars and dots are
+ * placed in pixels, because a date sits inside a column, not on its edge.
  */
 
 .timeline {
@@ -51,7 +52,7 @@
 .timeline__days {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: var(--tl-day-w);
+  grid-auto-columns: var(--tl-cell-w);
 }
 
 .timeline__month {
@@ -94,10 +95,10 @@
 .timeline__rows {
   position: relative;
   flex: 1;
-  /* Vertical ticks on Mondays: a tile one week wide. */
+  /* Vertical ticks: one per week of days, or one per column once the step grows. */
   background-image: linear-gradient(to right, var(--border) 0 1px, transparent 1px);
-  background-size: calc(var(--tl-day-w) * 7) 100%;
-  background-position: calc(var(--tl-name-w) + var(--tl-day-w) * var(--tl-week-offset)) 0;
+  background-size: var(--tl-tile-w) 100%;
+  background-position: var(--tl-tile-x) 0;
 }
 
 .timeline__today {
@@ -133,26 +134,28 @@
 }
 
 .timeline__track {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: var(--tl-day-w);
-  align-items: center;
+  position: relative;
   flex: 0 0 var(--tl-track-w);
 }
 
 .timeline__bar {
+  position: absolute;
+  top: 50%;
   height: 12px;
-  min-width: 3px;
   border-radius: 999px;
   background: var(--tl-color);
+  transform: translateY(-50%);
 }
 
 .timeline__dot {
-  justify-self: center;
+  position: absolute;
+  top: 50%;
   width: 11px;
   height: 11px;
+  margin-left: -5.5px;
   border-radius: 50%;
   background: var(--tl-color);
+  transform: translateY(-50%);
 }
 
 .timeline__row--done {

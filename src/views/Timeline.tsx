@@ -1,9 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { addDays, dateRange, dayLabel, diffDays } from '../db/dates'
+import { addDays, dayLabel, diffDays, monthNameNominative } from '../db/dates'
 import { useToday } from '../state/useToday'
 import type { ID, ISODate, Label, Task } from '../db/types'
 import { Axis } from './timeline/Axis'
-import { buildGrid, buildRows, clamp, rangeLabel, type Cell, type Row } from './timeline/model'
+import {
+  buildRows,
+  buildScale,
+  dayWidth,
+  midOf,
+  rangeLabel,
+  xOf,
+  type Cell,
+  type Row,
+  type Scale,
+} from './timeline/model'
 import './Timeline.css'
 
 export interface TimelineProps {
@@ -19,21 +29,26 @@ const PAD_DAYS = 3
 const MIN_SPAN_DAYS = 30
 /** Guard against an outlier date: the scale must not unfold into tens of thousands of columns. */
 const MAX_SPAN_DAYS = 1830
-const MIN_DAY_W = 6
-const MIN_DAY_W_COMPACT = 20
-const MAX_DAY_W = 44
 /** Below this width the day numbers run together — only week starts keep a label. */
 const DAY_LABEL_W = 20
-/** A narrow month cannot fit its label — only the boundary is left. */
-const MONTH_LABEL_W = 56
+/** A narrow bracket cannot fit its label — only the boundary is left. */
+const BRACKET_LABEL_W = 56
 const NAME_W = 184
 const NAME_W_COMPACT = 116
 const COMPACT_W = 620
 /** Room for the vertical scrollbar, otherwise the scale scrolls itself sideways. */
 const GUTTER = 10
+/**
+ * How far the track may run before the scale coarsens its step. A laptop asks it
+ * to fit; a phone has no width to fit anything into and takes scrolling instead.
+ */
+const SCREENS = 1
+const SCREENS_COMPACT = 3
 /** Callout levels of the axis. Fewer on a narrow screen: the axis must stay short. */
 const AXIS_LEVELS = 3
 const AXIS_LEVELS_COMPACT = 2
+/** A bar of a single day would otherwise vanish once the step is a month. */
+const MIN_BAR_W = 5
 
 /** Every dated task on one scale: where it starts, where the deadline is, what is overdue. */
 export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
@@ -45,23 +60,22 @@ export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
   useEffect(() => {
     const el = rootRef.current
     if (!el) return
-    // Day width is derived from the container, so watch the root element's size.
+    // Column width is derived from the container, so watch the root element's size.
     const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width))
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
 
   const rows = useMemo(() => buildRows(tasks, labels, now), [tasks, labels, now])
-  const days = useMemo(() => buildScale(rows, now), [rows, now])
-  const { cells, months, weekOffset } = useMemo(() => buildGrid(days), [days])
+  const span = useMemo(() => spanOf(rows, now), [rows, now])
 
   const compact = width > 0 && width < COMPACT_W
   const nameW = compact ? NAME_W_COMPACT : NAME_W
-  const minDayW = compact ? MIN_DAY_W_COMPACT : MIN_DAY_W
-  const free = Math.max(0, width - nameW - GUTTER)
-  const dayW = width === 0 ? minDayW : fitDayWidth(free / days.length, minDayW)
-  const trackW = dayW * days.length
-  const todayIndex = diffDays(days[0], now)
+  const free = Math.max(240, width - nameW - GUTTER)
+  const scale = useMemo(
+    () => buildScale(span.from, span.to, free, free * (compact ? SCREENS_COMPACT : SCREENS)),
+    [span, free, compact],
+  )
 
   // On a phone the scale is wider than the screen — open around today.
   const scrolled = useRef(false)
@@ -70,14 +84,16 @@ export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
     if (!el || scrolled.current || width === 0) return
     if (el.scrollWidth <= el.clientWidth) return
     scrolled.current = true
-    el.scrollLeft = nameW + todayIndex * dayW - el.clientWidth / 2
-  }, [width, nameW, dayW, todayIndex])
+    el.scrollLeft = nameW + midOf(scale, now) - el.clientWidth / 2
+  }, [width, nameW, scale, now])
 
   const vars = {
     '--tl-name-w': `${nameW}px`,
-    '--tl-day-w': `${dayW}px`,
-    '--tl-track-w': `${trackW}px`,
-    '--tl-week-offset': weekOffset,
+    '--tl-cell-w': `${scale.cellW}px`,
+    '--tl-track-w': `${scale.trackW}px`,
+    // Vertical tiling of the rows: one line per week of days, or per column.
+    '--tl-tile-w': `${scale.unit === 'day' ? scale.cellW * 7 : scale.cellW}px`,
+    '--tl-tile-x': `calc(var(--tl-name-w) + ${firstTileOffset(scale)}px)`,
   } as React.CSSProperties
 
   return (
@@ -88,24 +104,20 @@ export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
             <div className="timeline__corner" />
             <div className="timeline__head-track">
               <div className="timeline__months">
-                {months.map((m) => (
+                {scale.brackets.map((b) => (
                   <div
-                    key={m.key}
+                    key={b.key}
                     className="timeline__month"
-                    style={{ gridColumn: `${m.start + 1} / span ${m.span}` }}
+                    style={{ gridColumn: `${b.start + 1} / span ${b.span}` }}
                   >
-                    {m.span * dayW >= MONTH_LABEL_W ? m.label : ''}
+                    {b.span * scale.cellW >= BRACKET_LABEL_W ? b.label : ''}
                   </div>
                 ))}
               </div>
               <div className="timeline__days">
-                {cells.map((c, i) => (
-                  <div
-                    key={c.date}
-                    className={dayClass(c, i === todayIndex)}
-                    title={dayLabel(c.date)}
-                  >
-                    {dayW >= DAY_LABEL_W || c.week ? Number(c.date.slice(8)) : ''}
+                {scale.cells.map((c) => (
+                  <div key={c.date} className={cellClass(c)} title={dayLabel(c.date)}>
+                    {cellLabel(c, scale)}
                   </div>
                 ))}
               </div>
@@ -115,31 +127,18 @@ export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
           <div className="timeline__rows">
             <div
               className="timeline__today"
-              style={{
-                left: `calc(var(--tl-name-w) + var(--tl-day-w) * ${todayIndex} + var(--tl-day-w) / 2)`,
-              }}
+              style={{ left: `calc(var(--tl-name-w) + ${midOf(scale, now)}px)` }}
             />
             {rows.map((row) => (
-              <TimelineRow
-                key={row.task.id}
-                row={row}
-                first={days[0]}
-                count={days.length}
-                onOpen={onOpenTask}
-              />
+              <TimelineRow key={row.task.id} row={row} scale={scale} onOpen={onOpenTask} />
             ))}
           </div>
 
           <Axis
             rows={rows}
-            cells={cells}
-            months={months}
+            scale={scale}
             levels={compact ? AXIS_LEVELS_COMPACT : AXIS_LEVELS}
-            first={days[0]}
-            count={days.length}
-            dayW={dayW}
-            trackW={trackW}
-            todayIndex={todayIndex}
+            today={now}
             onOpen={onOpenTask}
           />
         </div>
@@ -150,25 +149,23 @@ export function Timeline({ tasks, labels, onOpenTask }: TimelineProps) {
 
 function TimelineRow({
   row,
-  first,
-  count,
+  scale,
   onOpen,
 }: {
   row: Row
-  first: ISODate
-  count: number
+  scale: Scale
   onOpen: (id: ID) => void
 }) {
   const { task } = row
-  // The scale may have been clipped to MAX_SPAN_DAYS — then the bar sticks to the edge.
-  const start = clamp(diffDays(first, row.from), 0, count - 1)
-  const end = clamp(diffDays(first, row.to), 0, count - 1)
-  const span = end - start + 1
   const range = rangeLabel(row)
 
   const classes = ['timeline__row']
   if (task.done) classes.push('timeline__row--done')
   if (row.overdue) classes.push('timeline__row--overdue')
+
+  // The bar covers whole days, so it reaches to the far edge of the last one.
+  const left = xOf(scale, row.from)
+  const right = xOf(scale, row.to) + dayWidth(scale, row.to)
 
   return (
     <div
@@ -188,9 +185,12 @@ function TimelineRow({
       </div>
       <div className="timeline__track">
         {row.milestone ? (
-          <div className="timeline__dot" style={{ gridColumn: `${start + 1}` }} />
+          <div className="timeline__dot" style={{ left: `${midOf(scale, row.from)}px` }} />
         ) : (
-          <div className="timeline__bar" style={{ gridColumn: `${start + 1} / span ${span}` }} />
+          <div
+            className="timeline__bar"
+            style={{ left: `${left}px`, width: `${Math.max(MIN_BAR_W, right - left)}px` }}
+          />
         )}
       </div>
     </div>
@@ -203,7 +203,7 @@ function TimelineRow({
  * Range of the scale: from the earliest date to the latest, with today always
  * inside it and the right edge no closer than a month away from today.
  */
-function buildScale(rows: Row[], now: ISODate): ISODate[] {
+function spanOf(rows: Row[], now: ISODate): { from: ISODate; to: ISODate } {
   let min = now
   let max = now
   for (const r of rows) {
@@ -211,31 +211,38 @@ function buildScale(rows: Row[], now: ISODate): ISODate[] {
     if (r.to > max) max = r.to
   }
 
-  let start = addDays(min, -PAD_DAYS)
-  let end = addDays(max, PAD_DAYS)
+  let from = addDays(min, -PAD_DAYS)
+  let to = addDays(max, PAD_DAYS)
 
   const month = addDays(now, MIN_SPAN_DAYS)
-  if (end < month) end = month
+  if (to < month) to = month
 
-  if (diffDays(start, end) > MAX_SPAN_DAYS) {
+  if (diffDays(from, to) > MAX_SPAN_DAYS) {
     const anchor = addDays(now, -Math.floor(MAX_SPAN_DAYS / 2))
-    if (anchor > start) start = anchor
-    end = addDays(start, MAX_SPAN_DAYS)
+    if (anchor > from) from = anchor
+    to = addDays(from, MAX_SPAN_DAYS)
   }
-  return dateRange(start, end)
+  return { from, to }
 }
 
-function fitDayWidth(raw: number, min: number): number {
-  // A fractional width is fine, but round it — otherwise drift from the grid piles up.
-  const w = Math.floor(raw * 100) / 100
-  return Math.min(MAX_DAY_W, Math.max(min, w))
+/** Where the first tiling line falls: on the first Monday, or on the first column. */
+function firstTileOffset(scale: Scale): number {
+  if (scale.unit !== 'day') return 0
+  const at = scale.cells.findIndex((c) => c.week)
+  return at < 0 ? 0 : at * scale.cellW
 }
 
-function dayClass(cell: Cell, isToday: boolean): string {
+function cellLabel(cell: Cell, scale: Scale): string {
+  if (scale.unit === 'month') return monthNameNominative(cell.date).slice(0, 3).toLowerCase()
+  if (scale.unit === 'week') return String(Number(cell.date.slice(8)))
+  return scale.cellW >= DAY_LABEL_W || cell.week ? String(Number(cell.date.slice(8))) : ''
+}
+
+function cellClass(cell: Cell): string {
   const classes = ['timeline__day']
   if (cell.week) classes.push('timeline__day--week')
-  if (cell.month) classes.push('timeline__day--month')
+  if (cell.bracket) classes.push('timeline__day--month')
   if (cell.weekend) classes.push('timeline__day--weekend')
-  if (isToday) classes.push('timeline__day--today')
+  if (cell.today) classes.push('timeline__day--today')
   return classes.join(' ')
 }

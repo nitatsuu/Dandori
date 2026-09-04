@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
-import { diffDays, monthNameNominative } from '../../db/dates'
 import type { ID, ISODate } from '../../db/types'
-import { clamp, rangeLabel, type Cell, type Month, type Row } from './model'
+import { clamp, midOf, rangeLabel, type Row, type Scale } from './model'
 
 /*
  * One horizontal axis with every deadline on it, pinned to the bottom edge of
@@ -26,8 +25,8 @@ const DOT_W = 9
 const DOT_SLOTS = [0, -1, 1]
 /** Below this distance between two centres the dots would fuse into one blob. */
 const DOT_NEAR = DOT_W + 3
-/** A month narrower than this cannot hold its name. */
-const MONTH_LABEL_W = 48
+/** A bracket narrower than this cannot hold its label. */
+const BRACKET_LABEL_W = 48
 
 interface Mark {
   row: Row
@@ -46,40 +45,28 @@ interface Mark {
 
 export interface AxisProps {
   rows: Row[]
-  cells: Cell[]
-  months: Month[]
+  scale: Scale
   /** Callout levels available on each side of the axis; the height follows it. */
   levels: number
-  /** First day of the scale. */
-  first: ISODate
-  /** Number of days on the scale. */
-  count: number
-  dayW: number
-  trackW: number
-  todayIndex: number
+  today: ISODate
   onOpen: (id: ID) => void
 }
 
-export function Axis({
-  rows,
-  cells,
-  months,
-  levels,
-  first,
-  count,
-  dayW,
-  trackW,
-  todayIndex,
-  onOpen,
-}: AxisProps) {
-  const marks = useMemo(
-    () => place(rows, levels, first, count, dayW, trackW),
-    [rows, levels, first, count, dayW, trackW],
-  )
-  // Ticks are sparse: only week starts and month boundaries get one.
+export function Axis({ rows, scale, levels, today, onOpen }: AxisProps) {
+  const marks = useMemo(() => place(rows, levels, scale), [rows, levels, scale])
+  /*
+   * Ticks are sparse. With a day step only the week starts get one, otherwise
+   * every column would; with a week or a month step every column does, and the
+   * bracket boundaries — a month, or a year over months — get the long tick.
+   */
   const ticks = useMemo(
-    () => cells.flatMap((c, i) => (c.week || c.month ? [{ date: c.date, i, month: c.month }] : [])),
-    [cells],
+    () =>
+      scale.cells.flatMap((c, i) =>
+        c.bracket || scale.unit !== 'day' || c.week
+          ? [{ date: c.date, x: i * scale.cellW, bracket: c.bracket }]
+          : [],
+      ),
+    [scale],
   )
 
   return (
@@ -91,27 +78,27 @@ export function Axis({
         {ticks.map((t) => (
           <div
             key={t.date}
-            className={t.month ? 'timeline__tick timeline__tick--month' : 'timeline__tick'}
-            style={{ left: `${t.i * dayW}px` }}
+            className={t.bracket ? 'timeline__tick timeline__tick--month' : 'timeline__tick'}
+            style={{ left: `${t.x}px` }}
           />
         ))}
 
-        {months.map((m) =>
-          m.span * dayW >= MONTH_LABEL_W ? (
+        {scale.brackets.map((b) =>
+          b.span * scale.cellW >= BRACKET_LABEL_W ? (
             <div
-              key={m.key}
+              key={b.key}
               className="timeline__axis-month"
-              style={{ left: `${m.start * dayW + 4}px`, maxWidth: `${m.span * dayW - 6}px` }}
+              style={{
+                left: `${b.start * scale.cellW + 4}px`,
+                maxWidth: `${b.span * scale.cellW - 6}px`,
+              }}
             >
-              {monthNameNominative(`${m.key}-01`)}
+              {b.label}
             </div>
           ) : null,
         )}
 
-        <div
-          className="timeline__axis-today"
-          style={{ left: `calc(var(--tl-day-w) * ${todayIndex} + var(--tl-day-w) / 2)` }}
-        />
+        <div className="timeline__axis-today" style={{ left: `${midOf(scale, today)}px` }} />
 
         {marks.map((mark) => (
           <AxisMark key={mark.row.task.id} mark={mark} onOpen={onOpen} />
@@ -172,14 +159,7 @@ function AxisMark({ mark, onOpen }: { mark: Mark; onOpen: (id: ID) => void }) {
  * Puts a dot and a callout on the axis for every row. `rows` are sorted by date,
  * so one pass left to right is enough.
  */
-function place(
-  rows: Row[],
-  levels: number,
-  first: ISODate,
-  count: number,
-  dayW: number,
-  trackW: number,
-): Mark[] {
+function place(rows: Row[], levels: number, scale: Scale): Mark[] {
   const marks: Mark[] = []
   // Right edge already taken, per dot slot and per callout level.
   const dots = DOT_SLOTS.map(() => Number.NEGATIVE_INFINITY)
@@ -188,16 +168,14 @@ function place(
   let prefer = 0
 
   for (const row of rows) {
-    // The scale may have been clipped to its maximum — then the dot sticks to the edge.
-    const i = clamp(diffDays(first, row.point), 0, count - 1)
-    const x = i * dayW + dayW / 2
+    const x = midOf(scale, row.point)
 
     let slot = dots.findIndex((e) => x - e >= DOT_NEAR)
     if (slot < 0) slot = 0
     dots[slot] = x
 
     const w = clamp(row.task.title.length * CHAR_W + LABEL_PAD, MIN_LABEL_W, MAX_LABEL_W)
-    const spot = fit(taken, levels, prefer, x, w, trackW)
+    const spot = fit(taken, levels, prefer, x, w, scale.trackW)
     if (spot) {
       taken[spot.level * 2 + spot.side] = spot.left + w
       prefer = 1 - spot.side

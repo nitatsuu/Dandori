@@ -88,6 +88,12 @@ One schema for all workspaces. No per-workspace schemas.
 - The main scenario: see all deadlines on one scale and understand where the jam is.
 - The scale is never shorter than a month from today: with a couple of tasks it would
   otherwise take a third of the screen and look cut off.
+- A column is a day only while days are wide enough to read. Past that the step
+  grows to a week and then to a month, so a grant two years out still fits on the
+  screen instead of squeezing every day into a hairline. Dates keep their exact
+  place inside a column — only the grid and the labels become coarser. On a phone
+  there is no width to fit anything into, so the step holds out longer and the
+  scale scrolls instead.
 - An axis is pinned along the bottom edge: one line across the full width, closed by
   an arrow, with ticks on Mondays and month boundaries and month names underneath.
   One dot per task at its deadline (its start date if it has no deadline), and a short
