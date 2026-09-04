@@ -163,6 +163,8 @@ export async function createTask(workspaceId: ID, input: NewTask): Promise<ID> {
     due_date: due,
     done: false,
     remind_days_before: null,
+    muted: false,
+    note_id: null,
     position: await nextTaskPosition(workspaceId, due),
     label_ids: input.label_ids ?? [],
     custom_fields: [],
@@ -190,6 +192,8 @@ export type TaskPatch = Partial<
     | 'due_date'
     | 'done'
     | 'remind_days_before'
+    | 'muted'
+    | 'note_id'
     | 'label_ids'
     | 'custom_fields'
   >
@@ -300,7 +304,7 @@ export async function updateNote(
 
 /** A folder goes away together with its whole subtree. */
 export async function deleteNote(id: ID): Promise<void> {
-  await db.transaction('rw', db.notes, async () => {
+  await db.transaction('rw', db.notes, db.tasks, async () => {
     const root = await db.notes.get(id)
     if (!root) return
 
@@ -319,6 +323,14 @@ export async function deleteNote(id: ID): Promise<void> {
 
     for (const n of all) {
       if (doomed.has(n.id) && !n.deleted) await db.notes.put(touch({ ...n, deleted: true }))
+    }
+
+    // A task pointing at a deleted note would keep offering a dead link.
+    const tasks = await db.tasks.where('workspace_id').equals(root.workspace_id).toArray()
+    for (const task of tasks) {
+      if (task.note_id && doomed.has(task.note_id)) {
+        await db.tasks.put(touch({ ...task, note_id: null }))
+      }
     }
   })
   queue()

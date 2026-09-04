@@ -16,7 +16,13 @@ body {
   font-size: var(--fz-md);
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
+  /*
+   * A two-finger horizontal swipe over the board or the timeline was navigating
+   * the browser back. Nothing in the app is reached by going back — it is a
+   * single page — so the gesture only ever loses the user's place.
+   */
   overscroll-behavior: none;
+  overscroll-behavior-x: none;
 }
 
 button {

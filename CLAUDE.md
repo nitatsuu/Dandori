@@ -28,6 +28,8 @@ Fixed after the interviews. Change only at the explicit request of the project o
 - Two range modes:
   - `14 дней` (14 days) — a sliding window, the first column is always «Сегодня» (today).
   - `Лента` (feed) — infinite scroll of days to the left and to the right, days load as you go.
+    It has a «Сегодня» button that scrolls back to the current date; the 14-day window
+    does not need one, today is always inside it.
 - The third mode is `Месяц` (month): a plain monthly grid. This is the calendar from
   the requirements, there is no separate tab for it.
 - The «Без даты» (no date) column is pinned on the left and does not scroll away.
@@ -56,9 +58,18 @@ One schema for all workspaces. No per-workspace schemas.
 - Deadline (optional)
 - Labels
 - Remind N days before
+- «Не показывать в напоминаниях» (mute) — keeps the task out of the banner even when
+  it is due today or overdue. Separate from the reminder select, which only controls
+  the advance warning: a deadline tracker must show today and overdue by default,
+  so opting out has to be explicit.
 - Done (checkbox)
+- An attached note, at most one. One-way: the task points at the note, the note knows
+  nothing about the task. Deleting the note clears the link instead of leaving a dead
+  one. "Открыть" switches to the notes tab, expands the tree down to it and selects it.
 - Custom fields: a list of name–value pairs, added by the user when needed.
   Links, numbers, anything — they go here. There is no separate "link" field.
+  The name is rendered as the field's label and the value gets an ordinary input,
+  the way every other field on the card looks; clicking the label edits the name.
 
 **Dates only, no time of day.** No "14:30", no time slots, no time blocking.
 
@@ -77,6 +88,11 @@ One schema for all workspaces. No per-workspace schemas.
 - The main scenario: see all deadlines on one scale and understand where the jam is.
 - The scale is never shorter than a month from today: with a couple of tasks it would
   otherwise take a third of the screen and look cut off.
+- A summary strip is pinned along the bottom edge: every task on one line, full width,
+  with a short preview above each bar that opens the task. It lives inside the same
+  scroller as the rows, so the two halves can never drift apart. Overlapping bars are
+  packed into three sub-lanes within that single band — it stays one line, it does not
+  become a second chart.
 - On the phone it scrolls horizontally, on the laptop it fits entirely.
 
 ### Notes
@@ -96,6 +112,9 @@ One schema for all workspaces. No per-workspace schemas.
 
 - Two themes: dark and light, following the system setting plus a manual toggle.
 - Density is compact.
+- Horizontal overscroll is suppressed on the scrollers. A two-finger swipe over the
+  board or the timeline was navigating the browser back, and nothing in a single-page
+  app is reached by going back — the gesture only ever lost the user's place.
 - Three tabs: `Доска` (board) · `Таймлайн` (timeline) · `Заметки` (notes).
 - Sync status dot in the header: 7×7 px, visible only during an exchange, when offline
   or on error. The app writes to the local database and does not wait for the network,

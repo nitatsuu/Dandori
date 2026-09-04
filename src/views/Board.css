@@ -42,6 +42,18 @@
 
 /* Day columns */
 
+/*
+ * `overscroll-behavior-x: contain` keeps a two-finger swipe that runs past the
+ * end of the strip inside the strip: without it the trackpad gesture turns into
+ * the browser's «back» and the app is gone. The bounce at the edge stays, only
+ * the hand-off to the page is cut.
+ *
+ * There is deliberately no `scroll-padding-left` here. It used to hold the
+ * pinned columns' width, but the pinned columns are pinned: they sit inside
+ * that padding forever, so every scroll-into-view aimed at something inside
+ * them — a focused field, a caret moving with every typed letter — chased a
+ * target the strip could never reach and dragged the days into the past.
+ */
 .board__scroller {
   position: relative;
   display: flex;
@@ -49,7 +61,7 @@
   min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  scroll-padding-left: var(--nodate-w);
+  overscroll-behavior-x: contain;
 }
 
 .board__col {
@@ -382,8 +394,6 @@
    */
   .board__scroller {
     scroll-snap-type: x proximity;
-    /* Nothing is pinned here, so there is nothing to scroll clear of. */
-    scroll-padding-left: 0;
   }
 
   .board__col {

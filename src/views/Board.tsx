@@ -1,4 +1,12 @@
-import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import {
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+  type RefObject,
+} from 'react'
 import {
   closestCorners,
   DndContext,
@@ -62,6 +70,12 @@ export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask 
   // Overdue tasks the window cannot scroll back to. No column while there is nothing to show.
   const overdue = useMemo(() => collectOverdue(groups, now, days), [groups, now, days])
   const [dragged, setDragged] = useState<ID | null>(null)
+  /*
+   * The ribbon keeps its days and its scroller to itself, so the «Сегодня»
+   * button in the bar asks it to go home instead of scrolling anything itself.
+   * «14 дней» needs no such button: today never leaves that window.
+   */
+  const ribbon = useRef<RibbonHandle>(null)
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
@@ -127,6 +141,11 @@ export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask 
             </button>
           ))}
         </div>
+        {mode === 'ribbon' && (
+          <button className="btn" onClick={() => ribbon.current?.toToday()}>
+            Сегодня
+          </button>
+        )}
       </div>
 
       <DndContext
@@ -151,6 +170,7 @@ export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask 
             groups={groups}
             labels={labels}
             onOpenTask={onOpenTask}
+            ref={ribbon}
           />
         ) : (
           <Strip
@@ -264,24 +284,61 @@ const RIBBON_MAX = 120
 /** Start loading more days at this distance from the edge. */
 const RIBBON_EDGE = 900
 
-function Ribbon(props: StripProps) {
-  const start = props.today
+/** The window of days the ribbon starts with and comes back to. */
+function ribbonWindow(today: ISODate): ISODate[] {
+  return dateRange(addDays(today, -RIBBON_BACK), addDays(today, RIBBON_FORWARD))
+}
+
+interface RibbonHandle {
+  /** Bring today back into view, rebuilding the window of days if it has to. */
+  toToday: () => void
+}
+
+function Ribbon({ ref, ...props }: StripProps & { ref: Ref<RibbonHandle> }) {
+  const today = props.today
   const scroller = useRef<HTMLDivElement>(null)
-  const [days, setDays] = useState(() =>
-    dateRange(addDays(start, -RIBBON_BACK), addDays(start, RIBBON_FORWARD)),
-  )
+  const [days, setDays] = useState(() => ribbonWindow(today))
   // The day we hold on to while the window of days changes underneath.
   const anchor = useRef<{ day: ISODate; left: number; scrollLeft: number } | null>(null)
+  // Set when the window is being rebuilt around today and has to be scrolled there.
+  const jump = useRef(false)
 
   // The window shifted — put the strip back where the user left it.
   useLayoutEffect(() => {
     const el = scroller.current
+    if (!el) return
+
+    if (jump.current) {
+      jump.current = false
+      anchor.current = null
+      scrollToDay(el, today)
+      return
+    }
+
     const held = anchor.current
-    if (!el || !held) return
+    if (!held) return
     anchor.current = null
     const node = el.querySelector<HTMLElement>(`[data-day="${held.day}"]`)
     if (node) el.scrollLeft = held.scrollLeft + (node.offsetLeft - held.left)
-  }, [days])
+  }, [days, today])
+
+  // Scrolling far enough into the past carries today out of the window: then the
+  // window is rebuilt and the scroll waits until the new days are laid out.
+  useImperativeHandle(
+    ref,
+    () => ({
+      toToday() {
+        const el = scroller.current
+        if (!el) return
+        if (days.includes(today)) scrollToDay(el, today)
+        else {
+          jump.current = true
+          setDays(ribbonWindow(today))
+        }
+      },
+    }),
+    [days, today],
+  )
 
   function extend(side: 'left' | 'right') {
     const el = scroller.current

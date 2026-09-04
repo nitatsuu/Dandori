@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createNote, deleteNote, updateNote } from '../db/api'
 import { useNotes } from '../db/hooks'
 import { emptyOf } from '../lib/empty'
@@ -10,6 +10,10 @@ import './Notes.css'
 
 export interface NotesProps {
   workspaceId: ID
+  /** A note to open, requested from elsewhere — a task links to it. */
+  openNoteId?: ID | null
+  /** Called once the request has been honoured, so the caller can clear it. */
+  onOpened?: () => void
 }
 
 const MENU_W = 168
@@ -25,8 +29,11 @@ interface Menu {
   y: number
 }
 
-export function Notes({ workspaceId }: NotesProps) {
-  const notes = useNotes(workspaceId) ?? emptyOf<Note>()
+export function Notes({ workspaceId, openNoteId, onOpened }: NotesProps) {
+  // Undefined while the database is still answering; that is not the same as «нет заметок»
+  // and an outside request must not be resolved against it.
+  const loaded = useNotes(workspaceId)
+  const notes = loaded ?? emptyOf<Note>()
 
   const [selectedId, setSelectedId] = useState<ID | null>(null)
   // Folder expansion is screen state, not data: it is never written to the database.
@@ -35,11 +42,62 @@ export function Notes({ workspaceId }: NotesProps) {
   const [menu, setMenu] = useState<Menu | null>(null)
   // Phone: the tree and the editor do not fit side by side, so show one at a time.
   const [detail, setDetail] = useState(false)
+  // The row to scroll to once the folders above it are open and it is in the DOM.
+  const [scrollTo, setScrollTo] = useState<ID | null>(null)
+  const rowsRef = useRef<HTMLDivElement>(null)
 
   const selected = notes.find((n) => n.id === selectedId) ?? null
   const openFile = selected?.kind === 'file' ? selected : null
 
   const rows = useMemo(() => visibleRows(notes, expanded), [notes, expanded])
+
+  /*
+   * Opening a note on request from another view.
+   *
+   * The request is answered during render, the way the rest of the app derives state
+   * from a changed prop. Nothing is decided until `useNotes` has answered: until then
+   * a note that is missing is indistinguishable from one deleted on another device.
+   * Once the list is in, the caller is told either way — a request for a note that is
+   * gone would otherwise hang forever.
+   */
+  const request = openNoteId ?? null
+  const [answered, setAnswered] = useState<ID | null>(null)
+
+  if (request !== answered) {
+    if (request === null) {
+      setAnswered(null)
+    } else if (loaded !== undefined) {
+      setAnswered(request)
+      const note = loaded.find((n) => n.id === request)
+      if (note) {
+        setSelectedId(note.id)
+        setExpanded((prev) => expandTo(prev, loaded, note))
+        setScrollTo(note.id)
+        if (note.kind === 'file') setDetail(true)
+      }
+    }
+  }
+
+  // Ref to the current callback, so that the notification below does not depend on its identity.
+  const openedRef = useRef(onOpened)
+  useEffect(() => {
+    openedRef.current = onOpened
+  })
+
+  // The caller is told after the commit: it answers with a state change of its own.
+  useEffect(() => {
+    if (answered !== null) openedRef.current?.()
+  }, [answered])
+
+  useLayoutEffect(() => {
+    if (!scrollTo) return
+    const row = rowsRef.current?.querySelector<HTMLElement>(`[data-id="${scrollTo}"]`)
+    // On the phone the tree is hidden while the editor is open and the row has no
+    // geometry yet: hold the request until the user comes back to the tree.
+    if (row && row.offsetParent === null) return
+    setScrollTo(null)
+    row?.scrollIntoView({ block: 'nearest' })
+  }, [scrollTo, detail, rows])
 
   function toggle(id: ID) {
     setExpanded((prev) => {
@@ -102,10 +160,11 @@ export function Notes({ workspaceId }: NotesProps) {
           </button>
         </div>
 
-        <div className="notes__rows" role="tree">
+        <div className="notes__rows" role="tree" ref={rowsRef}>
           {rows.map(({ note, depth }) => (
             <div
               key={note.id}
+              data-id={note.id}
               className={`notes__row${note.id === selectedId ? ' notes__row--on' : ''}`}
               style={{ paddingLeft: `${depth * 12 + 4}px` }}
               role="treeitem"
@@ -171,6 +230,26 @@ export function Notes({ workspaceId }: NotesProps) {
 
 function clampX(x: number): number {
   return Math.max(4, Math.min(x, window.innerWidth - MENU_W - 4))
+}
+
+/**
+ * Opens every folder on the path to a note. A row inside a collapsed folder is not
+ * rendered at all, so without this there would be nothing to select or scroll to.
+ * The walk stops on a repeat: a parent chain that loops back on itself would
+ * otherwise spin forever.
+ */
+function expandTo(expanded: ReadonlySet<ID>, notes: Note[], note: Note): ReadonlySet<ID> {
+  const byId = new Map(notes.map((n) => [n.id, n]))
+  const next = new Set(expanded)
+  const seen = new Set<ID>()
+
+  let parent = note.parent_id
+  while (parent && !seen.has(parent)) {
+    seen.add(parent)
+    next.add(parent)
+    parent = byId.get(parent)?.parent_id ?? null
+  }
+  return next
 }
 
 /**

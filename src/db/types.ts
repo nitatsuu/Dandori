@@ -45,6 +45,12 @@ export interface Label extends Synced {
 
 /** Free-form card field: the user picks both the name and the value. */
 export interface CustomField {
+  /**
+   * Stable key. Rows are edited in place, so identifying them by array index
+   * would hand a deleted row's editing state to whoever shifts up into its slot.
+   * Older rows predate this field, so it is filled in on first edit.
+   */
+  id?: string
   name: string
   value: string
 }
@@ -58,6 +64,14 @@ export interface Task extends Synced {
   done: boolean
   /** How many days before the deadline to remind. `null` means no reminder. */
   remind_days_before: number | null
+  /**
+   * Keep the task out of the reminder banner entirely, even when it is due today
+   * or already overdue. Separate from `remind_days_before`, which only controls
+   * the advance warning and says nothing about the deadline itself.
+   */
+  muted: boolean
+  /** A note attached to the task, if any. */
+  note_id: ID | null
   /** Order within its own day column. */
   position: number
   label_ids: ID[]

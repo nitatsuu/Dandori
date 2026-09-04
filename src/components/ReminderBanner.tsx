@@ -29,7 +29,8 @@ export function ReminderBanner({ tasks, onOpenTask, onDismiss }: Props) {
     const soon: Entry[] = []
 
     for (const task of tasks) {
-      if (task.done || !task.due_date) continue
+      // `muted` opts a task out of the banner even when it is due or overdue.
+      if (task.done || task.muted || !task.due_date) continue
       const days = diffDays(now, task.due_date)
 
       if (days < 0) overdue.push({ task, days })

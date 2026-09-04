@@ -39,6 +39,8 @@ function Shell({ theme, onSetTheme }: { theme: Theme; onSetTheme: (t: Theme) => 
 
   const [activeLabels, setActiveLabels] = useState<ID[]>([])
   const [openTaskId, setOpenTaskId] = useState<ID | null>(null)
+  // A note the task card asked to open. Cleared once the notes view honours it.
+  const [openNoteId, setOpenNoteId] = useState<ID | null>(null)
   const [remindersHidden, setRemindersHidden] = useState(false)
 
   useBootstrap(workspaces)
@@ -98,7 +100,13 @@ function Shell({ theme, onSetTheme }: { theme: Theme; onSetTheme: (t: Theme) => 
         {tab === 'timeline' && (
           <Timeline tasks={tasks} labels={labels} onOpenTask={setOpenTaskId} />
         )}
-        {tab === 'notes' && <Notes workspaceId={workspaceId} />}
+        {tab === 'notes' && (
+          <Notes
+            workspaceId={workspaceId}
+            openNoteId={openNoteId}
+            onOpened={() => setOpenNoteId(null)}
+          />
+        )}
       </main>
 
       <TabBar tab={tab} onSelect={setTab} />
@@ -108,6 +116,12 @@ function Shell({ theme, onSetTheme }: { theme: Theme; onSetTheme: (t: Theme) => 
           taskId={openTaskId}
           workspaceId={workspaceId}
           labels={labels}
+          onOpenNote={(id) => {
+            // Opening a note means leaving the card: the two cannot share the screen.
+            setOpenNoteId(id)
+            setTab('notes')
+            setOpenTaskId(null)
+          }}
           onClose={() => setOpenTaskId(null)}
         />
       )}

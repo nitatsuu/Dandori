@@ -186,6 +186,134 @@
   background: var(--bg-hover);
 }
 
+/*
+ * Summary strip: every task at once on one line, pinned to the bottom edge.
+ * It sits inside the same scroller as the rows, so it takes the horizontal
+ * scroll from it for free and can never drift out of step with the scale.
+ */
+
+.timeline__strip {
+  --tl-bar-h: 10px;
+  /* Vertical shift between neighbouring bars: enough to tell them apart,
+     small enough that the whole thing still reads as one line. */
+  --tl-bar-step: 6px;
+  --tl-band-h: 22px;
+  --tl-tier-step: 14px;
+  --tl-strip-pad: 5px;
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  flex: 0 0 auto;
+  height: 70px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+/* Under the name column: hides the bars that scroll behind it. */
+.timeline__strip-cap {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  flex: 0 0 var(--tl-name-w);
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+}
+
+.timeline__strip-track {
+  position: relative;
+  /* Own stacking context: the bars below stack among themselves and stay under
+     the cap, instead of crawling out over the name column. */
+  z-index: 0;
+  flex: 0 0 var(--tl-track-w);
+}
+
+.timeline__strip-today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--today);
+  pointer-events: none;
+}
+
+/* A zero-width anchor at the start of the task: the preview and the bar hang off it. */
+.timeline__mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: calc(var(--tl-tier) + 1);
+  width: 0;
+  pointer-events: none;
+}
+
+.timeline__mark-name,
+.timeline__mark-bar,
+.timeline__mark-dot {
+  position: absolute;
+  left: 0;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.timeline__mark-name {
+  bottom: calc(var(--tl-strip-pad) + var(--tl-band-h) + var(--tl-tier) * var(--tl-tier-step));
+  height: var(--tl-tier-step);
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: var(--fz-xs);
+  line-height: var(--tl-tier-step);
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.timeline__mark-bar,
+.timeline__mark-dot {
+  bottom: calc(var(--tl-strip-pad) + var(--tl-tier) * var(--tl-bar-step));
+  height: var(--tl-bar-h);
+  border-radius: 999px;
+  background: var(--tl-color);
+  /* Bars overlap: a rim in the background colour keeps the edges of each one
+     visible, and the transparency shows that something lies underneath. */
+  box-shadow: 0 0 0 1px var(--bg);
+  opacity: 0.85;
+}
+
+.timeline__mark-dot {
+  border-radius: 50%;
+}
+
+.timeline__mark:hover .timeline__mark-bar,
+.timeline__mark:hover .timeline__mark-dot {
+  opacity: 1;
+}
+
+.timeline__mark:hover .timeline__mark-name {
+  color: var(--text);
+}
+
+.timeline__mark--done .timeline__mark-bar,
+.timeline__mark--done .timeline__mark-dot {
+  opacity: 0.4;
+}
+
+.timeline__mark--done .timeline__mark-name {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+
+.timeline__mark--overdue .timeline__mark-bar,
+.timeline__mark--overdue .timeline__mark-dot {
+  box-shadow: 0 0 0 1.5px var(--danger);
+  opacity: 1;
+}
+
+.timeline__mark--overdue .timeline__mark-name {
+  color: var(--danger);
+}
+
 @media (max-width: 720px) {
   .timeline {
     --tl-row-h: 32px;
@@ -193,5 +321,15 @@
 
   .timeline__name {
     padding: 0 var(--sp-3);
+  }
+
+  /* A finger is not a mouse: taller bars and preview lines, at the price
+     of a slightly taller strip. */
+  .timeline__strip {
+    --tl-bar-h: 12px;
+    --tl-bar-step: 8px;
+    --tl-band-h: 28px;
+    --tl-tier-step: 16px;
+    height: 84px;
   }
 }

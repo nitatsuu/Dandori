@@ -200,22 +200,116 @@
   border-color: var(--text);
 }
 
-/* Custom fields */
+/* Mute switch */
 
-.cfield {
+.dialog__mute {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  color: var(--text-dim);
+  font-size: var(--fz-sm);
+  cursor: pointer;
+}
+
+.dialog__mute input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+}
+
+/* Attached note */
+
+.notelink {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-size: var(--fz-md);
+  text-align: left;
+}
+
+.notelink:hover {
+  background: var(--bg-hover);
+}
+
+.notelink__icon {
+  flex: 0 0 auto;
+}
+
+.notelink__name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notelink__pick {
   display: grid;
-  grid-template-columns: 1fr 1.4fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: var(--sp-3);
 }
 
-.cfield__name {
-  color: var(--text-dim);
+.notelink__add {
+  align-self: flex-start;
+}
+
+/* Custom fields: the name is the label, the value is an ordinary input. */
+
+.cfield {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.cfield__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.cfield__label {
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: var(--fz-xs);
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.cfield__label:hover {
+  color: var(--accent);
+}
+
+.cfield__rename {
+  flex: 1;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid var(--accent);
+  background: none;
+  color: var(--text);
+  font-size: var(--fz-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cfield__rename:focus {
+  outline: none;
 }
 
 .cfield__del {
-  width: 28px;
-  justify-content: center;
+  flex: 0 0 auto;
   color: var(--text-faint);
+  font-size: var(--fz-sm);
+}
+
+.cfield__del:hover {
+  color: var(--danger);
 }
 
 @media (max-width: 720px) {
@@ -235,8 +329,8 @@
     grid-template-columns: 1fr;
   }
 
-  .cfield {
-    grid-template-columns: 1fr 1fr auto;
+  .notelink__pick {
+    grid-template-columns: 1fr;
   }
 
   .labels__row {

@@ -2,21 +2,30 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { renderMarkdown } from '../lib/markdown'
 import { useAutosave } from '../lib/useAutosave'
 import { useEscape } from '../lib/useEscape'
-import { createLabel, deleteLabel, deleteTask, updateLabel, updateTask } from '../db/api'
-import { useTask } from '../db/hooks'
+import { createLabel, createNote, deleteLabel, deleteTask, updateLabel, updateTask } from '../db/api'
+import { useNotes, useTask } from '../db/hooks'
 import { pluralDays } from '../db/dates'
-import { LABEL_COLORS, type CustomField, type ID, type Label, type LabelColor } from '../db/types'
+import {
+  LABEL_COLORS,
+  type CustomField,
+  type ID,
+  type Label,
+  type LabelColor,
+  type Note,
+} from '../db/types'
 import './TaskDialog.css'
 
 interface Props {
   taskId: ID
   workspaceId: ID
   labels: Label[]
+  /** Switches to the notes tab and opens the attached note. */
+  onOpenNote: (id: ID) => void
   onClose: () => void
 }
 
 /** The whole task card: title, description, dates, labels, custom fields. */
-export function TaskDialog({ taskId, workspaceId, labels, onClose }: Props) {
+export function TaskDialog({ taskId, workspaceId, labels, onOpenNote, onClose }: Props) {
   const task = useTask(taskId)
   const [preview, setPreview] = useState(false)
 
@@ -40,6 +49,7 @@ export function TaskDialog({ taskId, workspaceId, labels, onClose }: Props) {
           labels={labels}
           preview={preview}
           onSetPreview={setPreview}
+          onOpenNote={onOpenNote}
           onClose={onClose}
         />
       </div>
@@ -53,6 +63,7 @@ function Body({
   labels,
   preview,
   onSetPreview,
+  onOpenNote,
   onClose,
 }: {
   task: NonNullable<ReturnType<typeof useTask>>
@@ -60,6 +71,7 @@ function Body({
   labels: Label[]
   preview: boolean
   onSetPreview: (v: boolean) => void
+  onOpenNote: (id: ID) => void
   onClose: () => void
 }) {
   const id = task.id
@@ -160,6 +172,23 @@ function Body({
         </Field>
       </div>
 
+      {/*
+        Separate from the select above. "Не напоминать" only drops the advance
+        warning; a task due today or already overdue still shows up in the banner,
+        because that is the whole point of a deadline tracker. This is the opt-out
+        for the few tasks that should stay quiet regardless.
+      */}
+      <label className="dialog__mute">
+        <input
+          type="checkbox"
+          checked={task.muted}
+          onChange={(e) => patch({ muted: e.target.checked })}
+        />
+        <span>Не показывать в напоминаниях</span>
+      </label>
+
+      <NoteLink task={task} workspaceId={workspaceId} onOpenNote={onOpenNote} />
+
       <LabelPicker
         workspaceId={workspaceId}
         labels={labels}
@@ -217,6 +246,90 @@ function Field({
         {aside}
       </div>
       {children}
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------- note
+
+/**
+ * A note attached to the task. One-way: the task points at the note, the note
+ * knows nothing about the task. Deleting the note clears the link rather than
+ * leaving a dead one behind.
+ */
+function NoteLink({
+  task,
+  workspaceId,
+  onOpenNote,
+}: {
+  task: { id: ID; title: string; note_id: ID | null }
+  workspaceId: ID
+  onOpenNote: (id: ID) => void
+}) {
+  const notes = useNotes(workspaceId)
+  const [picking, setPicking] = useState(false)
+
+  // Folders hold no text, so only files can be attached.
+  const files = (notes ?? []).filter((n: Note) => n.kind === 'file')
+  const linked = task.note_id ? (files.find((n) => n.id === task.note_id) ?? null) : null
+
+  async function create() {
+    const id = await createNote(workspaceId, 'file', null, task.title)
+    await updateTask(task.id, { note_id: id })
+    setPicking(false)
+  }
+
+  return (
+    <div className="dialog__field">
+      <div className="dialog__field-head">
+        <span className="dialog__field-label">Заметка</span>
+        {linked && (
+          <button
+            className="dialog__link"
+            onClick={() => void updateTask(task.id, { note_id: null })}
+          >
+            Отвязать
+          </button>
+        )}
+      </div>
+
+      {linked ? (
+        <button className="notelink" onClick={() => onOpenNote(linked.id)}>
+          <span className="notelink__icon">📄</span>
+          <span className="notelink__name">{linked.name.trim() || 'Без названия'}</span>
+          <span className="dialog__link">Открыть</span>
+        </button>
+      ) : picking ? (
+        <div className="notelink__pick">
+          <select
+            className="field"
+            defaultValue=""
+            autoFocus
+            onChange={(e) => {
+              if (!e.target.value) return
+              void updateTask(task.id, { note_id: e.target.value })
+              setPicking(false)
+            }}
+          >
+            <option value="">Выбрать заметку</option>
+            {files.map((n) => (
+              <option key={n.id} value={n.id}>
+                {n.name.trim() || 'Без названия'}
+              </option>
+            ))}
+          </select>
+          <button className="btn" onClick={() => void create()}>
+            Создать
+          </button>
+          <button className="btn btn--quiet" onClick={() => setPicking(false)}>
+            Отмена
+          </button>
+        </div>
+      ) : (
+        <button className="btn btn--quiet notelink__add" onClick={() => setPicking(true)}>
+          Привязать заметку
+        </button>
+      )}
     </div>
   )
 }
@@ -363,6 +476,13 @@ function ColorPicker({
 
 // --------------------------------------------------------------- custom fields
 
+/*
+ * A custom field reads as a named value, not as a pair of blank boxes: the name
+ * becomes the field's label and the value gets the same input treatment as any
+ * other field on the card. Clicking the label turns it back into a text box,
+ * which is the only time the name is editable.
+ */
+
 function CustomFields({
   fields,
   onChange,
@@ -370,45 +490,88 @@ function CustomFields({
   fields: CustomField[]
   onChange: (f: CustomField[]) => void
 }) {
-  function patch(i: number, part: Partial<CustomField>) {
-    onChange(fields.map((f, j) => (i === j ? { ...f, ...part } : f)))
+  // Rows written before ids existed get one now, so editing state cannot follow
+  // the wrong row after a deletion.
+  const missingIds = fields.some((f) => !f.id)
+  useEffect(() => {
+    if (missingIds) onChange(fields.map((f) => (f.id ? f : { ...f, id: crypto.randomUUID() })))
+  }, [missingIds, fields, onChange])
+
+  function add() {
+    onChange([...fields, { id: crypto.randomUUID(), name: '', value: '' }])
   }
 
   return (
     <div className="dialog__field">
       <div className="dialog__field-head">
         <span className="dialog__field-label">Поля</span>
-        <button
-          className="dialog__link"
-          onClick={() => onChange([...fields, { name: '', value: '' }])}
-        >
+        <button className="dialog__link" onClick={add}>
           Добавить
         </button>
       </div>
 
       {fields.map((field, i) => (
-        <div className="cfield" key={i}>
-          <input
-            className="field cfield__name"
-            value={field.name}
-            placeholder="Имя"
-            onChange={(e) => patch(i, { name: e.target.value })}
-          />
-          <input
-            className="field"
-            value={field.value}
-            placeholder="Значение"
-            onChange={(e) => patch(i, { value: e.target.value })}
-          />
-          <button
-            className="btn btn--quiet cfield__del"
-            onClick={() => onChange(fields.filter((_, j) => j !== i))}
-            aria-label="Удалить поле"
-          >
-            ✕
-          </button>
-        </div>
+        <CustomFieldRow
+          key={field.id ?? i}
+          field={field}
+          onChange={(next) => onChange(fields.map((f, j) => (i === j ? next : f)))}
+          onRemove={() => onChange(fields.filter((_, j) => j !== i))}
+        />
       ))}
+    </div>
+  )
+}
+
+function CustomFieldRow({
+  field,
+  onChange,
+  onRemove,
+}: {
+  field: CustomField
+  onChange: (f: CustomField) => void
+  onRemove: () => void
+}) {
+  // A field created a moment ago has no name yet, so it opens ready to be named.
+  const [naming, setNaming] = useState(field.name === '')
+  const [name, setName] = useAutosave(field.name, (v) => onChange({ ...field, name: v }))
+  const [value, setValue] = useAutosave(field.value, (v) => onChange({ ...field, value: v }))
+
+  return (
+    <div className="cfield">
+      <div className="cfield__head">
+        {naming ? (
+          <input
+            className="cfield__rename"
+            value={name}
+            placeholder="Имя поля"
+            autoFocus
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => setNaming(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur()
+            }}
+          />
+        ) : (
+          <button
+            className="cfield__label"
+            onClick={() => setNaming(true)}
+            title="Переименовать поле"
+          >
+            {name.trim() || 'Без имени'}
+          </button>
+        )}
+
+        <button className="cfield__del" onClick={onRemove} aria-label="Удалить поле">
+          ✕
+        </button>
+      </div>
+
+      <input
+        className="field"
+        value={value}
+        placeholder="Значение"
+        onChange={(e) => setValue(e.target.value)}
+      />
     </div>
   )
 }

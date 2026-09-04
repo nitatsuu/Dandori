@@ -40,6 +40,12 @@ create table if not exists public.tasks (
   due_date            date,
   done                boolean not null default false,
   remind_days_before  integer,
+  -- Keeps the task out of the reminder banner even when it is due today or
+  -- already overdue. Separate from remind_days_before, which only controls
+  -- the advance warning.
+  muted               boolean not null default false,
+  -- An attached note. Dropping the note only clears the link.
+  note_id             uuid,
   position            double precision not null default 0,
   -- Labels live right inside the task: there is one user, a join table is redundant here.
   label_ids           jsonb not null default '[]'::jsonb,
@@ -63,6 +69,17 @@ create table if not exists public.notes (
   updated_at    timestamptz not null default now(),
   deleted       boolean not null default false
 );
+
+-- tasks is declared before notes, so this foreign key is attached afterwards.
+-- Dropping a note only clears the link, it never takes the task with it.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'tasks_note_id_fkey') then
+    alter table public.tasks
+      add constraint tasks_note_id_fkey
+      foreign key (note_id) references public.notes (id) on delete set null;
+  end if;
+end $$;
 
 -- Sync pulls rows by `updated_at`, the rest is the ordinary lookup by workspace.
 create index if not exists labels_updated_idx on public.labels (user_id, updated_at);
