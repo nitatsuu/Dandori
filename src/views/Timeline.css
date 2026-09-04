@@ -227,13 +227,14 @@
 }
 
 /* Under the name column: hides whatever scrolls behind it. */
+/*
+ * Spacer that keeps the axis in step with the tracks of the rows above. It is
+ * not pinned and paints nothing: the names it used to stand in for are in the
+ * rows, which the axis never reaches, so pinning it only left a blank white
+ * block in the corner and took a fifth of the width away from the axis on a phone.
+ */
 .timeline__axis-cap {
-  position: sticky;
-  left: 0;
-  z-index: 1;
   flex: 0 0 var(--tl-name-w);
-  background: var(--bg);
-  border-right: 1px solid var(--border);
 }
 
 .timeline__axis-track {
