@@ -283,6 +283,23 @@ Owns: `vite.config.ts`, the manifest and the service worker, `wrangler.jsonc`, C
 - Checking the install to the home screen.
 - Secrets never end up in the repository under any circumstances.
 
+### `designer` — visual design
+
+Owns nothing on `main`. Works in a separate worktree on the `design` branch and
+never touches `main`, never pushes, never deploys. If the pass turns out badly it is
+thrown away by deleting the branch, and nothing has to be undone.
+
+Touches `src/styles/` and the `.css` files of the views and components, plus the
+smallest markup change a style genuinely needs. Never `src/db/`, `src/sync/`,
+`src/auth/`.
+
+- Spacing, type scale, colour tokens, borders, shadows, hover and focus states.
+- Parity between the two themes, and between the laptop and the phone.
+- Adds nothing. The "What must not exist" list applies to it in full, and so does
+  every product decision above: restyling what exists is design, adding an element
+  is a finding. Reordering what is already on screen needs the owner's word.
+- Russian interface text is not translated, reworded or shortened.
+
 ### `reviewer` — review and minimalism control
 
 Owns nothing, only reads.
