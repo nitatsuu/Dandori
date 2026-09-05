@@ -34,16 +34,16 @@ Fixed after the interviews. Change only at the explicit request of the project o
   the requirements, there is no separate tab for it.
 - The «Без даты» (no date) column is pinned on the left and does not scroll away.
   Dragging a card back into it clears the date.
-- The «Просрочено» (overdue) column is the second pinned one, right after «Без даты».
-  It shows unfinished tasks with a past deadline that are not visible in the window.
-  It appears only when such tasks exist. A task keeps its real date, which is printed
-  on the card; dragging it onto a day moves the deadline. You cannot drop a card into
-  this column: it has no date of its own.
+- There is no «Просрочено» column, and adding one back is a finding. An overdue task
+  stays on its own day; the reminder banner is the one place that gathers them all,
+  and a click on a chip there opens the task. A pinned column could only ever hold
+  the days the window does not already show, so it disagreed with the banner and
+  read as broken.
 - The «14 дней» window starts from yesterday: otherwise yesterday's deadline would
   disappear from the board at midnight. In «Лента» and «Месяц» the past is reachable anyway.
-- On the phone there are no pinned columns: the pinned area plus one day already fill
-  the whole screen, the second one does not fit. «Без даты» and «Просрочено» become
-  ordinary first columns of the feed, and the initial scroll position is today.
+- On the phone nothing is pinned: the pinned column plus one day already fill the
+  whole screen. «Без даты» becomes an ordinary first column of the feed, and the
+  initial scroll position is today.
 - A task with a far-off date stays on its own date, it does not "collapse" anywhere.
 - «Сделано» (done) is a checkbox right on the card. The card fades and gets struck
   through, but stays on its day.

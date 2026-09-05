@@ -6,7 +6,6 @@ import {
 } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { toggleTaskDone } from '../../db/api'
-import { dayLabel } from '../../db/dates'
 import { labelColors, labelVar } from '../../lib/labels'
 import type { ID, Label, Task } from '../../db/types'
 import { accent, cardClass } from './model'
@@ -17,15 +16,13 @@ interface Props {
   /** Key of the column the card is drawn in: it identifies the drop target. */
   column: string
   compact?: boolean
-  /** Show the date on the card where the column header does not already give it away. */
-  showDate?: boolean
   onOpen: (id: ID) => void
 }
 
 /** Threshold below which a release counts as a click rather than a drag. */
 const CLICK_SLOP = 5
 
-export function TaskCard({ task, labels, column, compact, showDate, onOpen }: Props) {
+export function TaskCard({ task, labels, column, compact, onOpen }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { column },
@@ -60,21 +57,13 @@ export function TaskCard({ task, labels, column, compact, showDate, onOpen }: Pr
       onPointerDown={onPointerDown}
       onClick={onClick}
     >
-      <CardBody task={task} labels={labels} showDate={showDate} />
+      <CardBody task={task} labels={labels} />
     </div>
   )
 }
 
 /** Card body: the same markup is drawn under the finger in the DragOverlay. */
-export function CardBody({
-  task,
-  labels,
-  showDate,
-}: {
-  task: Task
-  labels: Label[]
-  showDate?: boolean
-}) {
+export function CardBody({ task, labels }: { task: Task; labels: Label[] }) {
   const colors = labelColors(task, labels)
 
   return (
@@ -93,9 +82,6 @@ export function CardBody({
       />
       <span className="board__card-main">
         <span className="board__card-title">{task.title}</span>
-        {showDate && task.due_date && (
-          <span className="board__card-date">{dayLabel(task.due_date)}</span>
-        )}
         {colors.length > 0 && (
           <span className="board__dots">
             {colors.map((color, i) => (

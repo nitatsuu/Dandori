@@ -76,38 +76,15 @@
   background: var(--bg-sunken);
 }
 
-/*
- * Pinned columns stay put during horizontal scrolling, so their background has
- * to be opaque. «Просрочено» sits right up against the days, that is, directly
- * after «Без даты».
- */
-.board__col--nodate,
-.board__col--overdue {
+/* The pinned column stays put during horizontal scrolling, so its background
+   has to be opaque. */
+.board__col--nodate {
   position: sticky;
+  left: 0;
   z-index: 2;
   flex-basis: var(--nodate-w);
   background: var(--bg);
   border-right: 1px solid var(--border-strong);
-}
-
-.board__col--nodate {
-  left: 0;
-}
-
-.board__col--overdue {
-  left: var(--nodate-w);
-  background: var(--overdue-bg);
-}
-
-.board__col-date--overdue {
-  color: var(--danger);
-}
-
-/* Date on an overdue card: the column header does not tell you which day it is. */
-.board__card-date {
-  color: var(--danger);
-  font-size: var(--fz-xs);
-  white-space: nowrap;
 }
 
 .board__col--over {
@@ -401,8 +378,7 @@
     scroll-snap-align: start;
   }
 
-  .board__col--nodate,
-  .board__col--overdue {
+  .board__col--nodate {
     position: static;
     flex-basis: var(--day-col-w-mobile);
     scroll-snap-align: start;

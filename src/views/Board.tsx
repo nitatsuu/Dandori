@@ -33,15 +33,12 @@ import { CardBody } from './board/TaskCard'
 import {
   accent,
   cardClass,
-  collectOverdue,
   columnKey,
   dateFromKey,
   groupByDay,
   keyFromColumnId,
   NO_DATE,
-  OVERDUE,
 } from './board/model'
-import { OverdueColumn } from './board/OverdueColumn'
 import './Board.css'
 
 export interface BoardProps {
@@ -62,14 +59,6 @@ export interface BoardProps {
 const WINDOW_BACK = 1
 const WINDOW_FORWARD = 13
 
-/*
- * The drop goes where the pointer is, not where the card happens to overlap.
- * Comparing rectangles put a card's own column ahead of the one under the
- * cursor — a day column is as tall as the board, so it never looked close —
- * and near the left edge the pinned «Без даты» column won instead and quietly
- * cleared the date. Rectangles are still the fallback for the gap between two
- * columns, where the pointer is inside nothing at all.
- */
 /*
  * Two questions, answered by different means.
  *
@@ -144,8 +133,6 @@ export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask 
     () => dateRange(addDays(now, -WINDOW_BACK), addDays(now, WINDOW_FORWARD)),
     [now],
   )
-  // Overdue tasks the window cannot scroll back to. No column while there is nothing to show.
-  const overdue = useMemo(() => collectOverdue(groups, now, days), [groups, now, days])
   const [dragged, setDragged] = useState<ID | null>(null)
   /*
    * The ribbon keeps its days and its scroller to itself, so the «Сегодня»
@@ -173,8 +160,6 @@ export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask 
     const onColumn = keyFromColumnId(overId)
     const key = onColumn ?? (over.data.current?.column as string | undefined) ?? null
     if (key === null) return
-    // Nothing can be dropped into «Просрочено»: the column has no date of its own.
-    if (key === OVERDUE) return
 
     const column = groups.get(key) ?? emptyOf<Task>()
     const rest = column.filter((t) => t.id !== id)
@@ -257,7 +242,6 @@ export function Board({ workspaceId, tasks, labels, mode, onSetMode, onOpenTask 
         ) : (
           <Strip
             days={days}
-            overdue={overdue}
             workspaceId={workspaceId}
             today={now}
             groups={groups}
@@ -293,7 +277,6 @@ interface StripProps {
 
 function Strip({
   days,
-  overdue,
   scroller,
   onScroll,
   workspaceId,
@@ -303,8 +286,6 @@ function Strip({
   onOpenTask,
 }: StripProps & {
   days: ISODate[]
-  /** Only in «14 дней» mode: the ribbon can scroll back into the past on its own. */
-  overdue?: Task[]
   scroller?: RefObject<HTMLDivElement | null>
   onScroll?: () => void
 }) {
@@ -320,9 +301,6 @@ function Strip({
 
   return (
     <div className="board__scroller" ref={el} onScroll={onScroll}>
-      {overdue && overdue.length > 0 && (
-        <OverdueColumn tasks={overdue} labels={labels} onOpenTask={onOpenTask} />
-      )}
       {columns.map((date) => (
         <DayColumn
           key={date ?? NO_DATE}
