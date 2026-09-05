@@ -324,7 +324,8 @@ Anything debatable is decided by the project owner, not by an agent.
   `.claude/settings.json` has `includeCoAuthoredBy: false`.
 - Commit after every finished piece, not in one dump at the end.
 - Messages are short and in one style: `<area>: <what was done>`.
-  Areas: `board`, `timeline`, `notes`, `db`, `sync`, `auth`, `pwa`, `build`, `docs`.
+  Areas: `board`, `timeline`, `notes`, `ui`, `db`, `sync`, `auth`, `pwa`, `build`, `docs`.
+  `ui` is for what crosses the views: tokens, base styles, the header, the dialog.
 - Keys and tokens never end up in the repository. Everything local goes into `.gitignore`.
 
 ---
