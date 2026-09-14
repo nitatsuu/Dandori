@@ -5,6 +5,7 @@ import { reconcile } from '../gcal/sync'
 import { setTaskGcal, setWorkspaceGcal, updateTask } from '../db/api'
 import { SAVE_DELAY } from '../lib/useAutosave'
 import { useEscape } from '../lib/useEscape'
+import { useWhole, wholeTime } from '../lib/useWhole'
 import type { T } from '../i18n'
 import type { TextKey } from '../i18n/dict'
 import type { GcalConfig, GcalReminder, Task, Workspace } from '../db/types'
@@ -183,6 +184,8 @@ function GcalForm({
   onChange,
   times,
   onTimes,
+  clearable = true,
+  wait = true,
   t,
 }: {
   value: GcalConfig
@@ -190,6 +193,10 @@ function GcalForm({
   /** The hours as the form shows them; an empty end is none at all. */
   times: { start: string; end: string }
   onTimes: (start: string, end: string) => void
+  /** Whether an emptiness left in the start takes the hours off. */
+  clearable?: boolean
+  /** Whether a whole hour waits the pause out before it is handed over. */
+  wait?: boolean
   t: T
 }) {
   const calendars = useCalendars()
@@ -201,6 +208,20 @@ function GcalForm({
   // A calendar Google did not list — it is still what the event is set to, and
   // drawing the picker without it would quietly move the event somewhere else.
   const missing = !list.some((c) => c.id === chosen)
+
+  /*
+   * The hours are typed into segment by segment, so the fields hold their own
+   * text and hand the pair over only once there is a whole hour to hand — see
+   * useWhole. An end is measured from a start, so a start taken off takes the
+   * end with it, and that too waits until the field is left.
+   */
+  const start = useWhole(
+    times.start,
+    wholeTime,
+    (v) => (v === null ? onTimes('', '') : onTimes(v, times.end)),
+    { clearable, wait },
+  )
+  const end = useWhole(times.end, wholeTime, (v) => onTimes(times.start, v ?? ''), { wait })
 
   function setReminder(i: number, patch: Partial<GcalReminder>) {
     onChange({
@@ -215,24 +236,13 @@ function GcalForm({
         <div className="gform__field">
           <span className="gform__label">{t('gcal.time')}</span>
           <div className="gform__times">
-            <input
-              className="field"
-              type="time"
-              aria-label={t('task.timeStart')}
-              value={times.start}
-              // An end is measured from the start, so it goes when the start does.
-              onChange={(e) => {
-                const start = e.target.value.slice(0, 5)
-                onTimes(start, start === '' ? '' : times.end)
-              }}
-            />
+            <input className="field" type="time" aria-label={t('task.timeStart')} {...start} />
             <input
               className="field"
               type="time"
               aria-label={t('task.timeEnd')}
-              value={times.end}
               disabled={times.start === ''}
-              onChange={(e) => onTimes(times.start, e.target.value.slice(0, 5))}
+              {...end}
             />
           </div>
         </div>
@@ -449,6 +459,12 @@ export function GcalEventDialog({
               onChange={setDraft}
               times={frame}
               onTimes={(start, end) => setFrame({ start, end })}
+              /* Nothing in this window reaches the database until «Сохранить»:
+                 an hour lands in the frame beside the field, which costs it
+                 nothing. So it goes as soon as it is whole, and the button
+                 reads it without having had to take the focus off the field —
+                 which is not a thing every browser does on a click. */
+              wait={false}
               t={t}
             />
             <div className="gwin__foot">
@@ -524,12 +540,13 @@ function GcalDefaults({ workspace, t }: { workspace: Workspace; t: T }) {
     void setWorkspaceGcal(workspace.id, { gcal: current.current })
   }, [workspace.id])
 
-  function edit(next: GcalConfig) {
+  function edit(next: GcalConfig, wait = true) {
     current.current = next
     setDraft(next)
     dirty.current = true
     if (timer.current !== null) clearTimeout(timer.current)
-    timer.current = setTimeout(flush, SAVE_DELAY)
+    if (wait) timer.current = setTimeout(flush, SAVE_DELAY)
+    else flush()
   }
 
   // An edit arriving from the other device is taken only while nothing local is
@@ -570,13 +587,16 @@ function GcalDefaults({ workspace, t }: { workspace: Workspace; t: T }) {
         value={draft}
         onChange={edit}
         times={{ start: draft.time, end: draft.end ?? '' }}
-        onTimes={(start, end) => {
-          // An empty start is someone mid-edit, not a wish for no time at all:
-          // these terms have to name an hour, since a task carrying no frame of
-          // its own is put into the calendar at it.
-          if (start === '') return
-          edit({ ...draft, time: start, end: end === '' ? null : end })
-        }}
+        /* The pause on the hours is the field's own: useWhole has waited the
+           typing out already, and waiting it out a second time here would put
+           these terms half a second behind every other control in the form. */
+        onTimes={(start, end) =>
+          edit({ ...draft, time: start, end: end === '' ? null : end }, false)
+        }
+        /* These terms have to name an hour, since a task carrying no frame of
+           its own is put into the calendar at it. A start rubbed out here is
+           given back rather than taken as a wish for no time at all. */
+        clearable={false}
         t={t}
       />
 

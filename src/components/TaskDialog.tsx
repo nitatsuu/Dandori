@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { renderMarkdown } from '../lib/markdown'
 import { SAVE_DELAY, useAutosave } from '../lib/useAutosave'
 import { useEscape } from '../lib/useEscape'
+import { useWhole, wholeDate, wholeTime } from '../lib/useWhole'
 import { Confirm } from './Confirm'
 import {
   createLabel,
@@ -139,29 +140,18 @@ function Body({
   const html = useMemo(() => (preview ? renderMarkdown(description) : ''), [preview, description])
 
   /*
-   * A `type=date` input fires onChange on every typed character. While someone is
-   * still typing the year the browser hands over an intermediate «0202-03-01», and
-   * that date would travel into the database and the timeline. Only write dates
-   * that look plausible.
+   * The four fields that are typed into segment by segment. They hold their own
+   * text and hand the task a date or an hour only once it is whole — see
+   * useWhole — so a half-typed value never travels out and comes back.
    */
-  function patchDate(key: 'start_date' | 'due_date', raw: string) {
-    if (raw === '') return patch({ [key]: null })
-    const year = Number(raw.slice(0, 4))
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw) || year < 1970 || year > 2999) return
-    patch({ [key]: raw })
-  }
-
-  /*
-   * A `type=time` input hands over «HH:MM», and «HH:MM:SS» where the browser was
-   * told to take seconds. The frame is minutes, so the rest is dropped.
-   */
-  function patchTime(key: 'start_time' | 'end_time', raw: string) {
-    const value = raw === '' ? null : raw.slice(0, 5)
+  const startDate = useWhole(task.start_date ?? '', wholeDate, (v) => patch({ start_date: v }))
+  const dueDate = useWhole(task.due_date ?? '', wholeDate, (v) => patch({ due_date: v }))
+  const startTime = useWhole(task.start_time ?? '', wholeTime, (v) =>
     // An end is a length measured from the start. Clearing the start leaves
     // nothing to measure it from, so it goes with it.
-    if (key === 'start_time' && value === null) return patch({ start_time: null, end_time: null })
-    patch({ [key]: value })
-  }
+    patch(v === null ? { start_time: null, end_time: null } : { start_time: v }),
+  )
+  const endTime = useWhole(task.end_time ?? '', wholeTime, (v) => patch({ end_time: v }))
 
   async function remove() {
     setAsking(false)
@@ -204,8 +194,7 @@ function Body({
             type="date"
             min="1970-01-01"
             max="2999-12-31"
-            value={task.start_date ?? ''}
-            onChange={(e) => patchDate('start_date', e.target.value)}
+            {...startDate}
           />
         </Field>
         <Field label={t('task.due')}>
@@ -214,8 +203,7 @@ function Body({
             type="date"
             min="1970-01-01"
             max="2999-12-31"
-            value={task.due_date ?? ''}
-            onChange={(e) => patchDate('due_date', e.target.value)}
+            {...dueDate}
           />
         </Field>
         <Field label={t('task.remind')}>
@@ -249,16 +237,14 @@ function Body({
             className="field"
             type="time"
             aria-label={t('task.timeStart')}
-            value={task.start_time ?? ''}
-            onChange={(e) => patchTime('start_time', e.target.value)}
+            {...startTime}
           />
           <input
             className="field"
             type="time"
             aria-label={t('task.timeEnd')}
-            value={task.end_time ?? ''}
             disabled={task.start_time === null}
-            onChange={(e) => patchTime('end_time', e.target.value)}
+            {...endTime}
           />
         </div>
       </Field>
