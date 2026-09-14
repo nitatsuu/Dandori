@@ -117,6 +117,10 @@ Fixed after the interviews. Change only at the explicit request of the project o
   no checkbox, nothing to drag. A start is moved where the other dates are
   moved: in the card, or by dragging the card itself. One task with two handles
   in two columns is two places to be wrong about what was just moved.
+  Marks stand above the day's cards, in the order of the deadlines they belong
+  to. They are the one thing on that day the owner would otherwise never see,
+  where a card standing on its own day cannot be missed; they are kept from
+  reading as cards by being quieter rather than by being further down.
   It is drawn in the day columns and in the month's cells, both of which are
   read as "what falls on these days"; the timeline already draws the span
   itself, and «Без даты» has no day to mark. A finished task is not marked:
