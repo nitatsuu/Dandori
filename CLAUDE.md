@@ -268,12 +268,16 @@ is not an integration for its own sake; it is the reminder the banner cannot giv
   from under its workspace's switch the way altering the terms does.
 - Without an end the event lasts 30 minutes. Nothing in the app says how long
   such a task takes, and a reminder needs an event, not a guess at a duration.
-- A task with two dates and both times makes one event across the whole span: it
+- A task with two dates and a frame of its own carrying both times makes one
+  event across the whole span: it
   opens at the start time on the start date and closes at the end time on the
   deadline. That is what a conference across three days is. Three events, one
   per day, would be three things to keep in step with one task, and the event's
   id is the task's — there is room for one. Anything short of both dates and
-  both times stays a single event on the task's own day, as it was before.
+  both times stays a single event on the task's own day, as it was before. A
+  default end carried by the terms is a length, not a span: it stretches the
+  event on the task's own day and never across two, because the terms speak for
+  every task in the workspace and a span is a thing one task has.
 - The event follows the task. Change the title, the description or the deadline
   and the event is rewritten in place — dragged to another day, it moves there
   with the same time and the same reminders. Finish the task or delete it and the
