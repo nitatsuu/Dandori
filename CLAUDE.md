@@ -115,6 +115,15 @@ One schema for all workspaces. No per-workspace schemas.
 - Description (markdown)
 - Start date (optional)
 - Deadline (optional)
+- Время (optional): a start and an end, hours and minutes. It stands beside the
+  dates and belongs to neither of them on its own — a deadline says which day
+  something falls on, but a conference also has a length, and a reminder set
+  without one says nothing about whether the afternoon is still free. It is
+  written under the title on the card and nowhere else: the board's columns are
+  days and the timeline's scale is days, and neither is redrawn by an hour.
+  Nothing sorts, groups or filters by it. An end alone cannot be given — the
+  field opens once there is a start to measure it from — and a start alone is a
+  moment rather than a span, which is all the card then says.
 - Labels
 - Remind N days before
 - «Не показывать в напоминаниях» (mute) — keeps the task out of the banner even when
@@ -130,7 +139,11 @@ One schema for all workspaces. No per-workspace schemas.
   The name is rendered as the field's label and the value gets an ordinary input,
   the way every other field on the card looks; clicking the label edits the name.
 
-**Dates only, no time of day.** No "14:30", no time slots, no time blocking.
+**The day is the unit, the clock is an aside.** A task stands on a day, is
+dragged by the day and is drawn by the day. The frame above says how long that
+day's work runs, and two things read it: the owner's eye on the card and the
+calendar event. No time slots, no time blocking, nothing laid out on a grid of
+hours.
 
 ### Labels
 
@@ -241,13 +254,26 @@ is not an integration for its own sake; it is the reminder the banner cannot giv
   sorts by, in both places at once. The nine label colours map onto nine of
   Google's eleven, one to one, and the picker keeps its job where there is no
   label to take a colour from.
-- **Time of day belongs to the event, never to the task.** A reminder has to name
-  a moment, so the event has a clock time — but the task does not, and no view
-  ever shows one. The board and the timeline stay date-only, and nothing sorts,
-  groups or filters by time. The schema keeps that promise: the clock lives in the
-  event's own record, beside the event's id.
-- An event lasts 30 minutes. Nothing in the app says how long a task takes, and a
-  reminder needs an event, not a guess at a duration.
+- **The clock is the task's, and there is one of it.** The event opens at the
+  task's start time and closes at its end time; the sync window sets that same
+  frame from the other side, and the task card sets it from this one. Two clocks
+  saying different things about one task is a question with no answer — the app
+  would show one hour and the phone would ring at another.
+  Where a task carries no frame the terms carry a default start, and that is
+  what its event is made on: a workspace synced whole has to put its events at
+  some hour, and its tasks are not going to be given one each by hand. The terms
+  carry a default end beside it, on the same footing.
+  A frame is the task's own data, never its terms. Setting one in the sync
+  window changes the event and nothing else, and it does not take the task out
+  from under its workspace's switch the way altering the terms does.
+- Without an end the event lasts 30 minutes. Nothing in the app says how long
+  such a task takes, and a reminder needs an event, not a guess at a duration.
+- A task with two dates and both times makes one event across the whole span: it
+  opens at the start time on the start date and closes at the end time on the
+  deadline. That is what a conference across three days is. Three events, one
+  per day, would be three things to keep in step with one task, and the event's
+  id is the task's — there is room for one. Anything short of both dates and
+  both times stays a single event on the task's own day, as it was before.
 - The event follows the task. Change the title, the description or the deadline
   and the event is rewritten in place — dragged to another day, it moves there
   with the same time and the same reminders. Finish the task or delete it and the
@@ -461,9 +487,9 @@ is not an integration for its own sake; it is the reminder the banner cannot giv
 The list is closed. Any item from here, in the code or in the interface, is a bug.
 
 - Collaboration: users, roles, invites, assignees, comments, mentions.
-- Time tracking, estimates in hours, time reports. Time of day in any form —
-  except the clock a Google Calendar event is given, which lives in the event's
-  record and appears in no view of the app.
+- Time tracking, estimates in hours, time reports. A task's frame says when
+  something runs; nothing measures how long it took, and nothing adds it up.
+  Time slots, hour grids and time blocking in any form.
 - Sprints, cycles, modules, epics, backlogs, story points.
 - Automations, rules, webhooks, integrations with external services — except
   Google Calendar, and only in the shape described above. It exists to deliver a
@@ -509,15 +535,16 @@ Justify it in the commit message.
 
 ```
 workspaces   id, user_id, name, position, gcal_sync boolean,
-             gcal jsonb {time, calendar_id, color_id, reminders},
+             gcal jsonb {time, end, calendar_id, color_id, reminders},
              created_at, updated_at, deleted
 labels       id, user_id, workspace_id, name, color, position,
              created_at, updated_at, deleted
 tasks        id, user_id, workspace_id, title, description,
-             start_date, due_date, done, remind_days_before, muted,
+             start_date, due_date, start_time, end_time,
+             done, remind_days_before, muted,
              note_id, position,
              label_ids jsonb [uuid], custom_fields jsonb [{name, value}],
-             gcal jsonb {time, calendar_id, color_id,
+             gcal jsonb {time, end, calendar_id, color_id,
                          reminders [{method, minutes}]} | {off: true},
              gcal_placed text,
              created_at, updated_at, deleted
@@ -531,11 +558,15 @@ All tables are under RLS, bound to `auth.uid()`. A label, a task or a note can
 only be written into a workspace of the same user: the foreign key alone checks
 that the workspace exists, not whose it is.
 
-Dates use the `date` type, not `timestamp`. No task has a time of day and none ever
-will. The one clock in the database is `gcal.time`, which belongs to a calendar
-event rather than to the task carrying it, is never read by any view, and would
-leave with the integration. The exception is the housekeeping `created_at` /
-`updated_at` / `synced_at`: they are never shown in the interface. `updated_at` is
+Dates use the `date` type, not `timestamp`, and the hours a task may carry are a
+separate pair of `text` columns spelled `HH:MM`. A day and an hour are answers to
+different questions here — a task is dragged by the day and keeps its frame
+through the move — and one `timestamp` would have to invent an hour for every
+task that has none. `text` rather than `time` because `gcal.time` is spelled that
+way already and because a `time` column hands back `09:00:00` what was written as
+`09:00`: the row a device wrote would differ from the row it reads, and every
+pull would look like an edit. The housekeeping `created_at` / `updated_at` /
+`synced_at` are never shown in the interface either. `updated_at` is
 the device's, and settles conflicts; `synced_at` is the server's, and is what a
 device pulls by — an edit made offline keeps the time it was made, and a device
 that pulled by `updated_at` would never ask for anything that old again.
