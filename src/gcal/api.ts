@@ -13,8 +13,12 @@ import { taskDate } from '../db/types'
 import type { GcalConfig, Task } from '../db/types'
 
 const BASE = 'https://www.googleapis.com/calendar/v3'
-/** Nothing in the app says how long a task takes, so every event is the same length. */
+/**
+ * With no end to run to, nothing says how long the task takes, so every such
+ * event is given the same length.
+ */
 const EVENT_MINUTES = 30
+const DAY_MINUTES = 24 * 60
 
 export interface Calendar {
   id: string
@@ -108,10 +112,75 @@ export function currentZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone
 }
 
+/**
+ * When the event opens and closes, as local `YYYY-MM-DDTHH:MM:00`.
+ *
+ * The frame is the task's own and is taken whole or not at all: its start with
+ * the terms' end would be a third clock, saying what neither of them says. A
+ * task carrying both times across two dates makes one event over the whole
+ * span — that is what a conference across three days is — and anything short
+ * of that stands on the one day the task stands on, an end carried by the
+ * terms being a length rather than a span.
+ *
+ * Exported because the sync signs these two values: they are what reaches the
+ * calendar, and working them out twice from different sides is how the two
+ * copies come to disagree.
+ */
+export function eventWindow(task: Task, cfg: GcalConfig): { start: string; end: string } {
+  const from = task.start_time ?? cfg.time
+  const to = task.start_time !== null ? task.end_time : (cfg.end ?? null)
+  const day = taskDate(task)
+  const spans =
+    to !== null &&
+    task.start_time !== null &&
+    task.start_date !== null &&
+    task.due_date !== null &&
+    // Before, not merely apart. Nothing checks one date field against the other,
+    // so a deadline earlier than the start is a typo waiting to happen, and a
+    // span built on it would open the event on a day neither the board column
+    // nor `taskDate` ever puts the task on — the one thing the event has always
+    // followed. Such a pair falls back to the single day, as it did before.
+    task.start_date < task.due_date
+
+  const start = `${spans ? task.start_date : day}T${from}:00`
+  const end = spans ? `${task.due_date}T${to}:00` : plusMinutes(start, dayLength(from, to))
+  // Nothing well formed can reach this now: on one day the length is worked out
+  // so as to come out positive, and a span runs to a later date whatever the
+  // clock says. What is left is a row this function cannot reason about — a
+  // date or a time written in some other shape, by a hand or by a build that is
+  // not this one — where the strings sort one way and read another. Google
+  // refuses an event that closes before it opens, and the task would go on
+  // looking synced with nothing of it in the calendar.
+  return end > start ? { start, end } : { start, end: plusMinutes(start, EVENT_MINUTES) }
+}
+
+/**
+ * How long an event standing on one day runs, in minutes.
+ *
+ * The end is a clock, not a moment: 22:00 to 01:00 is the evening running into
+ * the morning, and taken as a moment on the same day it read as three hours
+ * backwards and collapsed to the default half hour — the calendar saying one
+ * thing while the card said another. Counted the short way round the clock
+ * instead, the wrap is the whole of it and there are no dates to juggle.
+ *
+ * An end equal to the start is no length at all, and takes the half hour an
+ * absent end takes.
+ */
+function dayLength(from: string, to: string | null): number {
+  if (to === null) return EVENT_MINUTES
+  const length = (minutes(to) - minutes(from) + DAY_MINUTES) % DAY_MINUTES
+  return length === 0 ? EVENT_MINUTES : length
+}
+
+/** A wall clock `HH:MM` as minutes from midnight. */
+function minutes(time: string): number {
+  const [hh, mm] = time.split(':').map(Number)
+  return hh * 60 + mm
+}
+
 function body(task: Task, cfg: GcalConfig): Record<string, unknown> {
   const zone = currentZone()
-  const start = `${taskDate(task)}T${cfg.time}:00`
-  const end = plusMinutes(start, EVENT_MINUTES)
+  const { start, end } = eventWindow(task, cfg)
 
   return {
     id: eventIdOf(task.id),

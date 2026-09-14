@@ -15,7 +15,15 @@
 import { db, setMeta } from '../db/local'
 import { setTaskGcal } from '../db/api'
 import { currentSession, requestPush } from '../sync/sync'
-import { currentZone, deletedSince, deleteEvent, eventIdOf, GcalError, putEvent } from './api'
+import {
+  currentZone,
+  deletedSince,
+  deleteEvent,
+  eventIdOf,
+  eventWindow,
+  GcalError,
+  putEvent,
+} from './api'
 import { getToken, isConnected } from './client'
 import {
   GCAL_COLOR_OF,
@@ -99,14 +107,18 @@ async function sentNotes(): Promise<Map<ID, Sent>> {
 
 function signature(task: Task, cfg: GcalConfig): string {
   const reminders = cfg.reminders.map((r) => `${r.method}:${r.minutes}`).join(',')
+  const { start, end } = eventWindow(task, cfg)
   return [
     task.title,
     task.description,
-    // The day the event stands on, which is not always the deadline: signed by
-    // `due_date` alone, a task moved by its start date would keep the event it
-    // was first given and never be rewritten onto the day it had moved to.
-    taskDate(task),
-    cfg.time,
+    // The two ends of the event as they will be written, rather than the dates
+    // and times they are worked out from. Everything that can move them reaches
+    // the calendar through these two — a card dragged to another day, a frame
+    // set on the task, a default end changed in the terms — and the day among
+    // them is `taskDate`'s, so a task moved by its start date is rewritten onto
+    // the day it moved to instead of keeping the one it was first given.
+    start,
+    end,
     cfg.color_id ?? '',
     reminders,
     // The event is written in the zone of whichever device wrote it. Leave it
