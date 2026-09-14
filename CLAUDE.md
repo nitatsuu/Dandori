@@ -151,10 +151,19 @@ One schema for all workspaces. No per-workspace schemas.
   An end alone cannot be given — the field opens once there is a start to
   measure it from — and a start alone is a moment rather than a span, which is
   all the card then says. The pair is taken off the same way it is given, by
-  rubbing out the start, and that is the price of the rule: a start rubbed out
-  to be typed again takes the end beside it. A frame carried over midnight ends
+  rubbing out the start and leaving the field. A frame carried over midnight ends
   the next morning, since 22:00 to 01:00 is a thing an evening's work does and
   the hours say so plainly.
+- A date or an hour is written when the field holds a whole one. Half of a date
+  is not a date: a `type=date` field hands over an empty value while a segment
+  is still being typed, and writing that emptiness through and back cleared the
+  field under the owner's fingers — «16» typed over «15» came out «06», and
+  starting the date over lost it altogether. So the field holds what is being
+  typed into it, and the task is told only when there is something whole to
+  tell: a full date, a full hour, or a field deliberately left empty, which is
+  how a date is cleared and is the one case that waits until the field is left.
+  Typing stays: a deadline months out is reached by typing it, not by paging a
+  picker to it.
 - Labels
 - Remind N days before
 - «Не показывать в напоминаниях» (mute) — keeps the task out of the banner even when
