@@ -121,9 +121,17 @@ One schema for all workspaces. No per-workspace schemas.
   without one says nothing about whether the afternoon is still free. It is
   written under the title on the card and nowhere else: the board's columns are
   days and the timeline's scale is days, and neither is redrawn by an hour.
-  Nothing sorts, groups or filters by it. An end alone cannot be given — the
-  field opens once there is a start to measure it from — and a start alone is a
-  moment rather than a span, which is all the card then says.
+  Nothing sorts, groups or filters by it. It is left out of the month grid's
+  cells, where a card is a fifth of a day column wide and carries its title and
+  nothing else — the month says where the load sits and the day behind it is
+  where the load is read.
+  An end alone cannot be given — the field opens once there is a start to
+  measure it from — and a start alone is a moment rather than a span, which is
+  all the card then says. The pair is taken off the same way it is given, by
+  rubbing out the start, and that is the price of the rule: a start rubbed out
+  to be typed again takes the end beside it. A frame carried over midnight ends
+  the next morning, since 22:00 to 01:00 is a thing an evening's work does and
+  the hours say so plainly.
 - Labels
 - Remind N days before
 - «Не показывать в напоминаниях» (mute) — keeps the task out of the banner even when
@@ -265,7 +273,12 @@ is not an integration for its own sake; it is the reminder the banner cannot giv
   carry a default end beside it, on the same footing.
   A frame is the task's own data, never its terms. Setting one in the sync
   window changes the event and nothing else, and it does not take the task out
-  from under its workspace's switch the way altering the terms does.
+  from under its workspace's switch the way altering the terms does. It is
+  given whole, though: an end set on a task that had no frame hands it the
+  start as well, the hour its terms would have given it, and from that moment
+  the task keeps its own hours while the workspace goes on setting everyone
+  else's. Half a frame is not a frame, and the card says which hours the task
+  has as soon as it has any.
 - Without an end the event lasts 30 minutes. Nothing in the app says how long
   such a task takes, and a reminder needs an event, not a guess at a duration.
 - A task with two dates and a frame of its own carrying both times makes one
