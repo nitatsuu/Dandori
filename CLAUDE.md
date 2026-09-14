@@ -104,6 +104,25 @@ Fixed after the interviews. Change only at the explicit request of the project o
   was aimed at. Planning happens on the laptop and «Месяц» is there for the long
   view, so this gesture only has to be aimable, not fast.
 - A task with a far-off date stays on its own date, it does not "collapse" anywhere.
+- A task that starts on one day and is due on another is marked on both. The
+  card stands on the day the task stands on, as it always has, and on the start
+  day there is a mark of it: the title under the word «Начало», dimmed, with the
+  same label colour so the eye joins the two. The start date was otherwise
+  invisible everywhere but the timeline and the card's own field — a month of
+  work would begin with nothing anywhere saying so, which is how a field comes
+  to be half dead. It appears whenever the two dates differ, at a day's gap as
+  at a month's: a threshold would be a number to remember, and the same task
+  would be drawn one way this week and another the next.
+  The mark is a mark and nothing more. It opens the task and that is all —
+  no checkbox, nothing to drag. A start is moved where the other dates are
+  moved: in the card, or by dragging the card itself. One task with two handles
+  in two columns is two places to be wrong about what was just moved.
+  It is drawn in the day columns and in the month's cells, both of which are
+  read as "what falls on these days"; the timeline already draws the span
+  itself, and «Без даты» has no day to mark. A finished task is not marked:
+  the mark is there to catch work about to begin, and work that is done is not
+  about to begin. On the phone's month cells it is a colour bar like any other,
+  which is all a 55 px cell holds either way.
 - «Сделано» (done) is a checkbox right on the card. The card fades and gets struck
   through, but stays on its day.
 
