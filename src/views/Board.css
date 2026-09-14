@@ -261,6 +261,15 @@
   overflow-wrap: anywhere;
 }
 
+/*
+ * The hours the task runs, under the title. An aside and drawn as one: a size
+ * down and dimmed, so a column is still read by its titles.
+ */
+.board__card-time {
+  color: var(--text-dim);
+  font-size: var(--fz-sm);
+}
+
 .board__dots {
   display: flex;
   gap: 3px;
@@ -402,6 +411,12 @@
 .board__card--compact .board__dot {
   width: 5px;
   height: 5px;
+}
+
+/* A month cell is the overview of where the load sits, and a fifth of a day
+   column wide. The frame belongs on the card, in the day behind the cell. */
+.board__card--compact .board__card-time {
+  display: none;
 }
 
 /* Phone */

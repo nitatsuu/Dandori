@@ -63,6 +63,14 @@ export function TaskCard({ task, labels, column, compact, onOpen }: Props) {
   )
 }
 
+/**
+ * «09:00» is stored and «9:00» is read: the card is glanced at, and a leading
+ * zero is a character that says nothing at that size.
+ */
+function clock(hhmm: string): string {
+  return hhmm.replace(/^0/, '')
+}
+
 /** Card body: the same markup is drawn under the finger in the DragOverlay. */
 export function CardBody({ task, labels }: { task: Task; labels: Label[] }) {
   const colors = labelColors(task, labels)
@@ -84,6 +92,13 @@ export function CardBody({ task, labels }: { task: Task; labels: Label[] }) {
       />
       <span className="board__card-main">
         <span className="board__card-title">{task.title}</span>
+        {task.start_time !== null && (
+          <span className="board__card-time">
+            {task.end_time === null
+              ? clock(task.start_time)
+              : `${clock(task.start_time)} – ${clock(task.end_time)}`}
+          </span>
+        )}
         {colors.length > 0 && (
           <span className="board__dots">
             {colors.map((color, i) => (

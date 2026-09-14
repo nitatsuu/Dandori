@@ -24,9 +24,11 @@
   width: 100%;
 }
 
+/* The clocks and the calendar in one row. The left column used to hold a
+   single clock at 120px; it holds two now, and the calendar keeps the rest. */
 .gform__pair {
   display: grid;
-  grid-template-columns: 120px 1fr;
+  grid-template-columns: minmax(190px, 1fr) minmax(0, 1fr);
   gap: var(--sp-4);
 }
 
@@ -34,6 +36,20 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
+  min-width: 0;
+}
+
+/* The event's hours, a start and an end. They share the column the single
+   clock stood in, so the calendar beside them keeps its width. */
+.gform__times {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+}
+
+/* A clock is as wide as the column gives it: an input keeps its own width
+   otherwise, and two of them would run out past the window's edge. */
+.gform__times .field {
   min-width: 0;
 }
 

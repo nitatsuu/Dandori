@@ -78,6 +78,17 @@
   gap: var(--sp-4);
 }
 
+/*
+ * The two clocks are sized like the date fields above them — two of the same
+ * three columns, the third left empty — so a frame is read as an aside to the
+ * days rather than as a field twice their width.
+ */
+.dialog__time {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-4);
+}
+
 .dialog__field {
   display: flex;
   flex-direction: column;
@@ -481,6 +492,12 @@
 
   .dialog__dates {
     grid-template-columns: 1fr;
+  }
+
+  /* The dates stack, the clocks do not: two of them fit a phone's width side
+     by side, and a start over an end reads as two unrelated fields. */
+  .dialog__time {
+    grid-template-columns: 1fr 1fr;
   }
 
   .notelink {

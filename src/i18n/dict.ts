@@ -105,6 +105,12 @@ export const TEXT = {
   'task.title': { ru: 'Название', en: 'Title' },
   'task.start': { ru: 'Начало', en: 'Start' },
   'task.due': { ru: 'Дедлайн', en: 'Deadline' },
+  // The hours a task runs. One label over the pair, and a name apiece for the
+  // two fields under it — read on their own by a screen reader, where «Начало»
+  // alone would be the start date's word a second time.
+  'task.time': { ru: 'Время', en: 'Time' },
+  'task.timeStart': { ru: 'Время начала', en: 'Start time' },
+  'task.timeEnd': { ru: 'Время окончания', en: 'End time' },
   'task.remind': { ru: 'Напомнить', en: 'Remind' },
   'task.remindNever': { ru: 'Не напоминать', en: 'No reminder' },
   'task.mute': { ru: 'Не показывать в напоминаниях', en: 'Keep out of reminders' },

@@ -151,6 +151,18 @@ function Body({
     patch({ [key]: raw })
   }
 
+  /*
+   * A `type=time` input hands over «HH:MM», and «HH:MM:SS» where the browser was
+   * told to take seconds. The frame is minutes, so the rest is dropped.
+   */
+  function patchTime(key: 'start_time' | 'end_time', raw: string) {
+    const value = raw === '' ? null : raw.slice(0, 5)
+    // An end is a length measured from the start. Clearing the start leaves
+    // nothing to measure it from, so it goes with it.
+    if (key === 'start_time' && value === null) return patch({ start_time: null, end_time: null })
+    patch({ [key]: value })
+  }
+
   async function remove() {
     setAsking(false)
     await deleteTask(task.id)
@@ -224,6 +236,32 @@ function Body({
           </select>
         </Field>
       </div>
+
+      {/*
+        The hours beside the days, and under them. A day says which column the
+        task stands in; the frame says how long that day's work runs, and the
+        calendar event is made on it. The end waits for a start: it is measured
+        from one, and on its own it says nothing.
+      */}
+      <Field label={t('task.time')}>
+        <div className="dialog__time">
+          <input
+            className="field"
+            type="time"
+            aria-label={t('task.timeStart')}
+            value={task.start_time ?? ''}
+            onChange={(e) => patchTime('start_time', e.target.value)}
+          />
+          <input
+            className="field"
+            type="time"
+            aria-label={t('task.timeEnd')}
+            value={task.end_time ?? ''}
+            disabled={task.start_time === null}
+            onChange={(e) => patchTime('end_time', e.target.value)}
+          />
+        </div>
+      </Field>
 
       {/*
         Separate from the select above. "Не напоминать" only drops the advance
@@ -398,7 +436,7 @@ function GcalRow({
 
       {open && (
         <GcalEventDialog
-          taskId={task.id}
+          task={task}
           current={own}
           following={byWorkspace}
           workspace={workspace}
