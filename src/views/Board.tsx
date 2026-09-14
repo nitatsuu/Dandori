@@ -40,6 +40,7 @@ import {
   columnKey,
   dateFromKey,
   groupByDay,
+  groupStarts,
   keyFromColumnId,
   NO_DATE,
 } from './board/model'
@@ -153,6 +154,7 @@ export function Board({
   const t = useT()
   const phone = usePhone()
   const groups = useMemo(() => groupByDay(tasks), [tasks])
+  const starts = useMemo(() => groupStarts(tasks), [tasks])
 
   const days = useMemo(
     () => dateRange(addDays(now, -WINDOW_BACK), addDays(now, WINDOW_FORWARD)),
@@ -279,6 +281,7 @@ export function Board({
             workspaceId={workspaceId}
             today={now}
             groups={groups}
+            starts={starts}
             labels={labels}
             onOpenTask={onOpenTask}
             onOpenDay={
@@ -295,6 +298,7 @@ export function Board({
             workspaceId={workspaceId}
             today={now}
             groups={groups}
+            starts={starts}
             labels={labels}
             onOpenTask={onOpenTask}
             openOn={openOn}
@@ -306,6 +310,7 @@ export function Board({
             workspaceId={workspaceId}
             today={now}
             groups={groups}
+            starts={starts}
             labels={labels}
             onOpenTask={onOpenTask}
           />
@@ -332,6 +337,8 @@ interface StripProps {
   workspaceId: ID
   today: ISODate
   groups: Map<string, Task[]>
+  /** Marks: which tasks begin in which column — see `groupStarts`. */
+  starts: Map<string, Task[]>
   labels: Label[]
   onOpenTask: (id: ID) => void
 }
@@ -343,6 +350,7 @@ function Strip({
   workspaceId,
   today,
   groups,
+  starts,
   labels,
   onOpenTask,
   opensOn,
@@ -402,6 +410,7 @@ function Strip({
           key={date ?? NO_DATE}
           date={date}
           tasks={groups.get(columnKey(date)) ?? emptyOf<Task>()}
+          starts={date ? (starts.get(date) ?? emptyOf<Task>()) : emptyOf<Task>()}
           workspaceId={workspaceId}
           today={today}
           labels={labels}

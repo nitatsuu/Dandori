@@ -7,6 +7,7 @@ import { dayLabel, relativeDayLabel, weekdayShort } from '../../i18n/dates'
 import type { ID, ISODate, Label, Task } from '../../db/types'
 import { columnId, columnKey } from './model'
 import { AddTaskField } from './AddTaskField'
+import { StartMark } from './StartMark'
 import { TaskCard } from './TaskCard'
 
 interface Props {
@@ -15,11 +16,13 @@ interface Props {
   date: ISODate | null
   today: ISODate
   tasks: Task[]
+  /** Tasks that begin on this day and are due on another: marked, not carded. */
+  starts: Task[]
   labels: Label[]
   onOpenTask: (id: ID) => void
 }
 
-export function DayColumn({ workspaceId, date, today, tasks, labels, onOpenTask }: Props) {
+export function DayColumn({ workspaceId, date, today, tasks, starts, labels, onOpenTask }: Props) {
   const [adding, setAdding] = useState(false)
   const { setNodeRef, isOver } = useDroppable({ id: columnId(date) })
   const t = useT()
@@ -57,6 +60,19 @@ export function DayColumn({ workspaceId, date, today, tasks, labels, onOpenTask 
       </header>
 
       <div className="board__list">
+        {/*
+          A group of their own above the sortable list, never inside it: a mark
+          is not a sortable item, and one among the cards would give the column
+          a second handle on the same task and a place a card could land in
+          without taking the position it was aimed at.
+        */}
+        {starts.length > 0 && (
+          <div className="board__starts">
+            {starts.map((task) => (
+              <StartMark key={task.id} task={task} labels={labels} onOpen={onOpenTask} />
+            ))}
+          </div>
+        )}
         <SortableContext items={tasks.map((x) => x.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
             <TaskCard

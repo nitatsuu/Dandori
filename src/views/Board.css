@@ -282,6 +282,57 @@
   border-radius: 50%;
 }
 
+/*
+ * The mark of a task that begins on this day and is due on another: its card
+ * stands in the column of the day it is due, and this says the work starts
+ * here.
+ *
+ * It stands above the cards because it is the one thing on this day that would
+ * otherwise be seen nowhere — a card is on its own day and cannot be missed,
+ * while a start that is never drawn is a date the owner has no reason to trust.
+ * Standing first, it has to be told from a card at a glance, and it is told by
+ * its paint rather than by its place: no ground, no shadow, no checkbox, the
+ * type a size down and dimmed. The stripe alone keeps its full colour, because
+ * it is what joins the mark to its card across the strip.
+ */
+.board__starts {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.board__start {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-4);
+  border-left: 2px solid var(--card-accent);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  text-align: left;
+  touch-action: manipulation;
+  transition:
+    background-color var(--t),
+    color var(--t);
+}
+
+.board__start:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.board__start-word {
+  color: var(--text-faint);
+  font-size: var(--fz-xs);
+}
+
+.board__start-title {
+  font-size: var(--fz-sm);
+  overflow-wrap: anywhere;
+}
+
 /* Month view */
 
 .board__month {
@@ -417,6 +468,16 @@
    column wide. The frame belongs on the card, in the day behind the cell. */
 .board__card--compact .board__card-time {
   display: none;
+}
+
+/* A month cell has no room for a second line, so the word and the title stand
+   on one. The type is already the cell's own: a mark is drawn at the size a
+   compact card is. */
+.board__start--compact {
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
 }
 
 /* Phone */
@@ -657,6 +718,48 @@
 
   .board__card--compact .board__check,
   .board__card--compact .board__card-main {
+    display: none;
+  }
+
+  /*
+   * The mark is tapped like anything else, so it is laid out at a finger's
+   * height: it stands in the list with the cards, and the two are read and hit
+   * as one column of rows.
+   */
+  .board__start {
+    justify-content: center;
+    min-height: var(--tap);
+    padding: var(--sp-2) var(--sp-4);
+    border-left-width: 3px;
+  }
+
+  .board__start:active {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+
+  /*
+   * A 55 px cell holds no words either way, so here the mark is a colour bar
+   * like the cell's own: the same height, the same colour, opened by the same
+   * tap. Paling it would only read as a different label rather than as a note.
+   */
+  .board__start--compact {
+    flex-basis: 10px;
+    min-height: 0;
+    height: 10px;
+    gap: 0;
+    padding: 0;
+    border: none;
+    background: var(--card-accent);
+  }
+
+  .board__start--compact:active {
+    background: var(--card-accent);
+    opacity: 0.6;
+  }
+
+  .board__start--compact .board__start-word,
+  .board__start--compact .board__start-title {
     display: none;
   }
 

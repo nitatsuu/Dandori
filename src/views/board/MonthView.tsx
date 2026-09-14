@@ -8,12 +8,15 @@ import type { ID, ISODate, Label, Task } from '../../db/types'
 import { emptyOf } from '../../lib/empty'
 import { columnId } from './model'
 import { AddTaskField } from './AddTaskField'
+import { StartMark } from './StartMark'
 import { TaskCard } from './TaskCard'
 
 interface Props {
   workspaceId: ID
   today: ISODate
   groups: Map<string, Task[]>
+  /** Tasks marked in a cell for beginning on that day — see `groupStarts`. */
+  starts: Map<string, Task[]>
   labels: Label[]
   onOpenTask: (id: ID) => void
   /**
@@ -24,7 +27,15 @@ interface Props {
   onOpenDay?: (date: ISODate) => void
 }
 
-export function MonthView({ workspaceId, today, groups, labels, onOpenTask, onOpenDay }: Props) {
+export function MonthView({
+  workspaceId,
+  today,
+  groups,
+  starts,
+  labels,
+  onOpenTask,
+  onOpenDay,
+}: Props) {
   const [anchor, setAnchor] = useState(today)
   const cells = useMemo(() => monthGrid(anchor), [anchor])
   const t = useT()
@@ -69,6 +80,7 @@ export function MonthView({ workspaceId, today, groups, labels, onOpenTask, onOp
             today={today}
             outside={!isSameMonth(date, anchor)}
             tasks={groups.get(date) ?? emptyOf<Task>()}
+            starts={starts.get(date) ?? emptyOf<Task>()}
             labels={labels}
             onOpenTask={onOpenTask}
             onOpenDay={onOpenDay}
@@ -86,6 +98,7 @@ function MonthCell({
   today,
   outside,
   tasks,
+  starts,
   labels,
   onOpenTask,
   onOpenDay,
@@ -96,6 +109,7 @@ function MonthCell({
   today: ISODate
   outside: boolean
   tasks: Task[]
+  starts: Task[]
   labels: Label[]
   onOpenTask: (id: ID) => void
   onOpenDay?: (date: ISODate) => void
@@ -116,12 +130,14 @@ function MonthCell({
 
   /*
    * The cell itself is the way to its day; what stands inside it keeps its own
-   * meaning. A tap on a colour bar opens that task, a tap on the plus starts a
-   * new one, and only the space around them leads to the day.
+   * meaning. A tap on a colour bar opens that task — the bar of a task that
+   * merely begins here as much as the bar of one that stands here — a tap on the
+   * plus starts a new one, and only the space around them leads to the day.
    */
   function open(e: ReactMouseEvent<HTMLDivElement>) {
     if (!onOpenDay) return
-    if ((e.target as HTMLElement).closest('.board__card, .board__add, .board__new')) return
+    const on = '.board__card, .board__start, .board__add, .board__new'
+    if ((e.target as HTMLElement).closest(on)) return
     onOpenDay(date)
   }
 
@@ -139,6 +155,10 @@ function MonthCell({
       </div>
 
       <div className="board__cell-list">
+        {/* Above the sortable list, as in a day column: a mark is not an item of it. */}
+        {starts.map((task) => (
+          <StartMark key={task.id} task={task} labels={labels} compact onOpen={onOpenTask} />
+        ))}
         <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
             <TaskCard
