@@ -162,6 +162,11 @@ One schema for all workspaces. No per-workspace schemas.
   typed into it, and the task is told only when there is something whole to
   tell: a full date, a full hour, or a field deliberately left empty, which is
   how a date is cleared and is the one case that waits until the field is left.
+  Whole is not the same as finished, so the writing waits the moment the rest of
+  the app's typed fields wait: the day half-typed into «16» is «1» first, a
+  whole date the task would take, and taking it carries the card to another
+  column and drops it at the end of that one — a place in a day is lost to a
+  keystroke that was on its way somewhere else.
   Typing stays: a deadline months out is reached by typing it, not by paging a
   picker to it.
 - Labels
