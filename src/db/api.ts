@@ -182,6 +182,8 @@ export async function createTask(workspaceId: ID, input: NewTask): Promise<ID> {
     description: input.description ?? '',
     start_date: start,
     due_date: due,
+    start_time: null,
+    end_time: null,
     done: false,
     remind_days_before: null,
     muted: false,
@@ -214,6 +216,8 @@ export type TaskPatch = Partial<
     | 'description'
     | 'start_date'
     | 'due_date'
+    | 'start_time'
+    | 'end_time'
     | 'done'
     | 'remind_days_before'
     | 'muted'

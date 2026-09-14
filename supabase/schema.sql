@@ -19,7 +19,8 @@ create table if not exists public.workspaces (
   name        text not null default '',
   position    double precision not null default 0,
   -- Put every dated task of this workspace into Google Calendar, with one set of
-  -- defaults: { "time": "10:00", "calendar_id": ..., "color_id": ..., "reminders": [...] }
+  -- defaults: { "time": "10:00", "end": "11:00" | null, "calendar_id": ...,
+  --             "color_id": ..., "reminders": [...] }
   gcal_sync   boolean not null default false,
   gcal        jsonb,
   created_at  timestamptz not null default now(),
@@ -45,9 +46,17 @@ create table if not exists public.tasks (
   workspace_id        uuid not null references public.workspaces (id) on delete cascade,
   title               text not null default '',
   description         text not null default '',
-  -- The date type, not timestamp: the app has no time of day and never will.
+  -- The date type, not timestamp: a task stands on a day, and the hours it may
+  -- run are a frame beside that day rather than a part of it.
   start_date          date,
   due_date            date,
+  -- The hours the task runs, HH:MM. An end is never written without a start:
+  -- it is a length, and with no start there is nothing to measure it from.
+  -- text rather than time, because a time column hands back 09:00:00 what was
+  -- written as 09:00, and every pull would then read as an edit of a row
+  -- nobody had touched.
+  start_time          text,
+  end_time            text,
   done                boolean not null default false,
   remind_days_before  integer,
   -- Keeps the task out of the reminder banner even when it is due today or
@@ -62,10 +71,10 @@ create table if not exists public.tasks (
   -- Custom fields of the card: [{ "name": "...", "value": "..." }]
   custom_fields       jsonb not null default '[]'::jsonb,
   -- The Google Calendar event mirroring this task, and how it is made:
-  -- { "time": "10:00", "calendar_id": "primary", "color_id": null,
-  --   "reminders": [{ "method": "popup", "minutes": 30 }] }
-  -- `time` is the one clock in this database. It belongs to the event, never to
-  -- the task: no view reads it and nothing sorts by it.
+  -- { "time": "10:00", "end": "11:00", "calendar_id": "primary",
+  --   "color_id": null, "reminders": [{ "method": "popup", "minutes": 30 }] }
+  -- `time` and `end` are the hours a task with no frame of its own is given:
+  -- where the task has one, the event is made on that instead.
   gcal                jsonb,
   -- The calendar an event was actually put in; null when there is none. The one
   -- durable record that the event exists — a device that did not create it has

@@ -60,6 +60,23 @@ export class DandoriDB extends Dexie {
           t.gcal_placed ??= null
         })
     })
+
+    /*
+     * The same gap for the hours a task may run. Left unfilled it is worse than
+     * a hole in a view: the push sends every column of every dirty row in one
+     * batch, and a row that has never heard of a column goes up with fewer keys
+     * than the row beside it — which the server refuses over the whole batch,
+     * so the table stops syncing until the gap happens to be pulled away.
+     */
+    this.version(3).upgrade(async (tx) => {
+      await tx
+        .table('tasks')
+        .toCollection()
+        .modify((t: Partial<Task>) => {
+          t.start_time ??= null
+          t.end_time ??= null
+        })
+    })
   }
 }
 

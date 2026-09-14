@@ -51,11 +51,20 @@ export interface Synced {
 /** How a task's event is made in Google Calendar. */
 export interface GcalConfig {
   /**
-   * When the event starts, `HH:MM`. The one clock in the whole app: it belongs
-   * to the event, never to the task, and no view reads it. A reminder has to
-   * name a moment, and a date on its own does not.
+   * When the event starts, `HH:MM`, for a task carrying no frame of its own. A
+   * workspace synced whole has to put its events at some hour, and its tasks
+   * are not going to be given one each by hand.
    */
   time: string
+  /**
+   * The default end beside it, `null` for none — then the event takes the same
+   * half hour it takes with no end at all.
+   *
+   * Optional in the type and nowhere else: terms written before this field
+   * existed carry nothing there, and they sit in stored jsonb on the server and
+   * in every device's cache. Read it as `cfg.end ?? null`.
+   */
+  end?: string | null
   /** Which of the owner's calendars the event goes in. `primary` is the default one. */
   calendar_id: string
   /** Google's own palette, `1`–`11`; `null` leaves the calendar's colour. */
@@ -119,6 +128,16 @@ export interface Task extends Synced {
   description: string
   start_date: ISODate | null
   due_date: ISODate | null
+  /**
+   * The hours the task runs, `HH:MM`, or `null`. The one clock it has: the card
+   * shows the frame and the calendar event is made on it. No view sorts, groups
+   * or filters by it — a task stands on a day whatever hour its work starts at.
+   *
+   * An end alone is never written. It is a length measured from the start, and
+   * with no start there is nothing to measure it from.
+   */
+  start_time: string | null
+  end_time: string | null
   done: boolean
   /** How many days before the deadline to remind. `null` means no reminder. */
   remind_days_before: number | null
@@ -229,6 +248,8 @@ export const SYNCED_COLUMNS = {
     description: true,
     start_date: true,
     due_date: true,
+    start_time: true,
+    end_time: true,
     done: true,
     remind_days_before: true,
     muted: true,
