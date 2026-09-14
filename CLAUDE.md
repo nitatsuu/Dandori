@@ -682,7 +682,10 @@ Owns: `supabase/`, `src/db/`, `src/sync/`, `src/auth/`, `src/gcal/`.
 
 ### `ui` — interface
 
-Owns: `src/views/`, `src/components/`, `src/styles/`.
+Owns: `src/views/`, `src/components/`, `src/styles/`, `src/lib/`, `src/i18n/`.
+`src/lib/` is where a piece of a field's behaviour lives once two components
+need it — the autosave pause, the escape key, the field that writes only whole
+values — and `src/i18n/` is the one dictionary both languages live in.
 
 - Board (three modes), timeline, notes, task card.
 - Workspace switcher, label filter, reminder banner.
